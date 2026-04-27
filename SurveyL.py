@@ -32,8 +32,8 @@ def set_background_solid(main="#6CD7E551", sidebar="#EEEFF3"):
     """, unsafe_allow_html=True)
 set_background_solid()
    
-st.title("📊 BCS Survey Logic Checker")
-st.caption("This tool is specifically designed for BCS Thailand/Taiwan. Identified mismatches will be highlighted in the deliverables.")
+st.title(" Barometer Survey Logic Checker")
+st.caption("This tool is specifically designed for Barometer EU. Identified mismatches will be highlighted in the deliverables.")
 
 # -------------------------------------------------------------------
 # File helpers
