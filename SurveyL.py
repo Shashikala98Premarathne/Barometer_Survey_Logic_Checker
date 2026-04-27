@@ -11,7 +11,7 @@ from io import BytesIO
 # -------------------------------------------------------------------
 # App setup
 # -------------------------------------------------------------------
-st.set_page_config(page_title="BCS Survey Logic Checker", layout="wide")
+st.set_page_config(page_title="Barometer Survey Logic Checker", layout="wide")
 def set_background_solid(main="#6CD7E551", sidebar="#EEEFF3"):
     st.markdown(f"""
     <style>
