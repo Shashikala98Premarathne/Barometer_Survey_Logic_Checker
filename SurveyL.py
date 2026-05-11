@@ -210,8 +210,9 @@ SURVEY_RULES = {
     12: "Gas barriers logic failed",
     13: "Sustainability quality logic failed",
     14: "Adhoc electric logic failed",
-    15: "Safety follow-up missing",
-    16: "Chinese truck logic failed",
+    15: "Adhoc electric use logic failed",
+    16: "Safety follow-up missing",
+    17: "Chinese truck logic failed",
 }
 
 # -------------------------------------------------------------------
@@ -401,6 +402,10 @@ adhoc_attr_cols = [
     if c.startswith("adhoc_electric_consider_attr_")
 ]
 
+adhoc_attr_cols2 = [
+    c for c in df.columns
+    if c.startswith("adhoc_electric_use_")
+]
 sf2_cols = [
     c for c in df.columns
     if c.startswith("safety_SF2_")
@@ -688,20 +693,25 @@ require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
     adhoc_attr_cols,
     14,
-    "adhoc electric attributes missing"
+    "adhoc electric consider attributes missing"
 )
-
+require_any_answer(
+    df["adhoc_electric_consider"].isin([3,4,5]),
+    adhoc_attr_cols2,
+    15,
+    "adhoc electric use attributes missing"
+)
 require_any_answer(
     df["safety_SF1"].isin([4,5]),
     sf2_cols,
-    15,
+    16,
     "safety_SF2 follow-up missing"
 )
 
 require_any_answer(
     df["adhoc_ch_consideration"].isin([1,2]),
     china_barr_cols,
-    16,
+    17,
     "adhoc_ch_barr missing"
 )
 # -------------------------------------------------------------------
