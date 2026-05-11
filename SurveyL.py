@@ -207,14 +207,16 @@ SURVEY_RULES = {
     9: "Electric barriers logic failed",
     10: "Electric application logic failed",
     11: "Gas application logic failed",
-    12: "Gas barriers logic failed",
-    13: "Sustainability quality logic failed",
-    14: "Adhoc electric logic failed",
-    15: "Adhoc electric use logic failed",
-    16: "Adhoc electric barrier logic failed",
-    17: "Adhoc electric future logic failed",
-    18: "Safety follow-up missing",
-    19: "Chinese truck logic failed",
+    12: "Gas fuel logic failed",
+    13: "Gas barriers logic failed",
+    14: "Sustainability quality logic failed",
+    15: "Adhoc electric logic failed",
+    16: "Adhoc electric use logic failed",
+    17: "Adhoc electric barrier logic failed",
+    18: "Adhoc electric future logic failed",
+    19: "Safety follow-up missing",
+    20: "Chinese truck logic failed",
+    21: "Chinese main barrier logic failed",
 }
 
 # -------------------------------------------------------------------
@@ -258,6 +260,8 @@ VARIABLE_STRUCTURE = {
 
     "gas_purchase": [1,2,3,4,5],
     "gas_cost": [1,2,3],
+    "gas_fuel": [0,1],
+
 
     "safety_SF1": [1,2,3,4,5],
     "safety_SF4": [1,2,3,4,5],
@@ -455,10 +459,9 @@ fuel_cols = [
     if c.startswith("fueltypes_consideration_")
 ]
 
-electric_cons_cols = [
-    c for c in df.columns
-    if c.startswith("electric_consideration_")
-]
+electric_app_cols = [ 
+    c for c in df.columns 
+    if c.startswith("electric_applications_") ]
 
 electric_barrier_cols = [
     c for c in df.columns
@@ -605,7 +608,6 @@ if "fleetsize" in df.columns:
 validate_binary_prefix("truckfleet_b")
 validate_binary_prefix("fueltypes_consideration_")
 validate_binary_prefix("trucks_consideration_b")
-validate_binary_prefix("trucks_consideration_type_b")
 validate_binary_prefix("electric_consideration_")
 validate_binary_prefix("electric_applications_")
 validate_binary_prefix("electric_barriers_")
@@ -640,6 +642,7 @@ validate_scale_prefix("sustainability_qualities_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_make_origin_", [1,2,3])
+validate_scale_prefix("trucks_consideration_type_",[1,2,3])
 
 # -------------------------------------------------------------------
 # Truck quantity validation
@@ -823,7 +826,7 @@ require_any_answer(
 
 require_any_answer(
     df["electric_purchase"].isin([3,4,5]),
-    electric_cons_cols,
+    electric_app_cols,
     10,
     "electric_application missing"
 )
@@ -834,67 +837,103 @@ require_any_answer(
     11,
     "gas_applications missing"
 )
+if "gas_fuel" in df.columns:
+
+    bad = (
+        df["gas_purchase"].isin([3,4,5])
+        &
+        df["gas_fuel"].apply(is_blank)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            12,
+            "gas_fuel missing",
+            i
+        )
 
 require_any_answer(
     df["gas_purchase"].isin([1,2]),
     gas_barrier_cols,
-    12,
+    13,
     "gas_barriers missing"
 )
 
 require_any_answer(
     df["sustainability_duration"].isin([1,2,3]),
     sustain_cols,
-    13,
+    14,
     "sustainability_qualities missing"
 )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
     adhoc_attr_cols,
-    14,
+    15,
     "adhoc electric consider attributes missing"
 )
 require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
     adhoc_attr_cols2,
-    15,
+    16,
     "adhoc electric use attributes missing"
 )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([1,2]),
     adhoc_attr_cols3,
-    16,
+    17,
     "adhoc electric barr attributes missing"
 )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([1,2]),
     adhoc_attr_cols4,
-    17,
+    18,
     "adhoc electric future attributes missing"
 )
 require_any_answer(
     df["safety_SF1"].isin([4,5]),
     sf2_cols,
-    18,
+    19,
     "safety_SF2 follow-up missing"
 )
 
 require_any_answer(
     df["adhoc_ch_consideration"].isin([1,2]),
     china_barr_cols,
-    19,
+    20,
     "adhoc_ch_barr missing"
 )
 
 require_any_answer(
     df["adhoc_consideration_china"].isin([4,5]),
     china_barr_cols1,
-    20,
+    21,
     "adhoc_main_barr_china missing"
 )
+# adhoc_electric_pref validation
+# Must contain valid master brand code
+# -------------------------------------------------------------------
+if "adhoc_electric_pref" in df.columns:
+
+    for i in df.index:
+
+        val = df.loc[i, "adhoc_electric_pref"]
+
+        if is_blank(val):
+            continue
+
+        sval = str(val).strip().lower()
+
+        if sval not in VALID_BRAND_CODES:
+
+            add_issue(
+                0,
+                f"adhoc_electric_pref invalid brand code: {val}",
+                i
+            )
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
@@ -939,28 +978,6 @@ else:
         ]
     )
     
-# -------------------------------------------------------------------
-# adhoc_electric_pref validation
-# Must contain valid master brand code
-# -------------------------------------------------------------------
-if "adhoc_electric_pref" in df.columns:
-
-    for i in df.index:
-
-        val = df.loc[i, "adhoc_electric_pref"]
-
-        if is_blank(val):
-            continue
-
-        sval = str(val).strip().lower()
-
-        if sval not in VALID_BRAND_CODES:
-
-            add_issue(
-                0,
-                f"adhoc_electric_pref invalid brand code: {val}",
-                i
-            )
 # -------------------------------------------------------------------
 # Display results
 # -------------------------------------------------------------------
