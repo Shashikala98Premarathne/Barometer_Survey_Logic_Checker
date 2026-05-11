@@ -330,6 +330,7 @@ for c in truckfleet_cols:
     for i in df[invalid].index:
         add_issue(0, f"{c} invalid (allowed 0,1)", i)
 
+
 # -------------------------------------------------------------------
 # Truck quantity validation
 # -------------------------------------------------------------------
@@ -340,21 +341,31 @@ truckqty_cols = [
 
 for c in truckqty_cols:
 
+    # Convert to numeric
     vals = pd.to_numeric(df[c], errors="coerce")
 
+    # ---------------------------------------------------------------
+    # ONLY validate real entered values
+    # Ignore blanks / #NULL! / NaN
+    # ---------------------------------------------------------------
+    has_real_value = df[c].apply(lambda v: not is_blank(v))
+
     invalid = (
-        (vals < 0) |
-        (vals > 999) |
-        vals.isna()
+        has_real_value &
+        (
+            vals.isna() |
+            (vals < 0) |
+            (vals > 999)
+        )
     )
 
     for i in df[invalid].index:
+
         add_issue(
             0,
-            f"{c} invalid quantity",
+            f"{c} invalid quantity (must be 0–999)",
             i
         )
-
 # -------------------------------------------------------------------
 # Truck quantity sum = fleetsize
 # -------------------------------------------------------------------
