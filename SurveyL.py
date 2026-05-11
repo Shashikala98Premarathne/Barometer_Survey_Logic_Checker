@@ -211,8 +211,10 @@ SURVEY_RULES = {
     13: "Sustainability quality logic failed",
     14: "Adhoc electric logic failed",
     15: "Adhoc electric use logic failed",
-    16: "Safety follow-up missing",
-    17: "Chinese truck logic failed",
+    16: "Adhoc electric barrier logic failed",
+    17: "Adhoc electric future logic failed",
+    18: "Safety follow-up missing",
+    19: "Chinese truck logic failed",
 }
 
 # -------------------------------------------------------------------
@@ -405,6 +407,16 @@ adhoc_attr_cols = [
 adhoc_attr_cols2 = [
     c for c in df.columns
     if c.startswith("adhoc_electric_use_")
+]
+
+adhoc_attr_cols3 = [
+    c for c in df.columns
+    if c.startswith("adhoc_electric_barr_")
+]
+
+adhoc_attr_cols4 = [
+    c for c in df.columns
+    if c.startswith("adhoc_electric_future_")
 ]
 sf2_cols = [
     c for c in df.columns
@@ -603,7 +615,45 @@ if "fleetsize" in df.columns and truckqty_cols:
             "Sum truckquantity != fleetsize",
             i
         )
+        
+# -------------------------------------------------------------------
+# adhoc_dist_cat sum must equal fleetsize
+# -------------------------------------------------------------------
+adhoc_dist_cols = [
+    "adhoc_dist_cat_1",
+    "adhoc_dist_cat_2",
+    "adhoc_dist_cat_3",
+    "adhoc_dist_cat_4"
+]
 
+existing_dist_cols = [
+    c for c in adhoc_dist_cols
+    if c in df.columns
+]
+
+if "fleetsize" in df.columns and existing_dist_cols:
+
+    dist_sum = (
+        df[existing_dist_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+        .sum(axis=1)
+    )
+
+    fleetsize = pd.to_numeric(
+        df["fleetsize"],
+        errors="coerce"
+    )
+
+    bad = dist_sum != fleetsize
+
+    for i in df[bad].index:
+
+        add_issue(
+            4,
+            "Sum adhoc_dist_cat_1-4 != fleetsize",
+            i
+        )
 # -------------------------------------------------------------------
 # Main supplier logic
 # -------------------------------------------------------------------
@@ -701,17 +751,31 @@ require_any_answer(
     15,
     "adhoc electric use attributes missing"
 )
+
+require_any_answer(
+    df["adhoc_electric_consider"].isin([1,2]),
+    adhoc_attr_cols3,
+    16,
+    "adhoc electric barr attributes missing"
+)
+
+require_any_answer(
+    df["adhoc_electric_consider"].isin([1,2]),
+    adhoc_attr_cols4,
+    17,
+    "adhoc electric future attributes missing"
+)
 require_any_answer(
     df["safety_SF1"].isin([4,5]),
     sf2_cols,
-    16,
+    18,
     "safety_SF2 follow-up missing"
 )
 
 require_any_answer(
     df["adhoc_ch_consideration"].isin([1,2]),
     china_barr_cols,
-    17,
+    19,
     "adhoc_ch_barr missing"
 )
 # -------------------------------------------------------------------
