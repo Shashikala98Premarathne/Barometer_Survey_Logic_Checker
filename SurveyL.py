@@ -283,6 +283,8 @@ VARIABLE_STRUCTURE = {
     "adhoc_gs_gs1": [1,2],
 
     "adhoc_last_purchase": [1,2,3,4],
+    
+    "adhoc_electric_probability_": [1,2,3,4,5],
 
     "adhoc_price_last_type": [1,2],
 
@@ -308,6 +310,83 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_last_weight": "numeric",
 }
 
+
+# -------------------------------------------------------------------
+# Master Brand Mapping
+# -------------------------------------------------------------------
+MASTER_BRANDS = {
+    "b1": "Ashok Leyland",
+    "b2": "Asia Motor Works",
+    "b3": "Beijing Auto/BAIC/Beiqi Futian",
+    "b4": "Bharat Benz",
+    "b5": "CAMC",
+    "b6": "CAT",
+    "b7": "Chevrolet",
+    "b8": "CNHTC/Steyr",
+    "b9": "DAF",
+    "b10": "Dennis Eagle",
+    "b11": "Dongfeng",
+    "b12": "Eicher",
+    "b13": "ERF",
+    "b14": "Foden",
+    "b15": "Force Motors",
+    "b16": "Ford",
+    "b17": "Foton",
+    "b18": "Freightliner",
+    "b19": "Fuso",
+    "b20": "Hino",
+    "b21": "Hitachi",
+    "b22": "Hongyan/Sichuan Auto/SAIC",
+    "b23": "HOWO",
+    "b24": "Hyundai",
+    "b25": "International",
+    "b26": "Isuzu",
+    "b27": "Iveco",
+    "b28": "JAC",
+    "b29": "Jie Fang/FAW",
+    "b30": "Kenworth",
+    "b31": "LGMG",
+    "b32": "LiuGong",
+    "b33": "Mack",
+    "b34": "Mahindra",
+    "b35": "MAN",
+    "b36": "Mercedes Benz",
+    "b37": "Nissan Diesel",
+    "b38": "Norinco",
+    "b39": "Peterbilt",
+    "b40": "Powerland",
+    "b41": "Powerstar",
+    "b42": "Quester",
+    "b43": "Renault Trucks",
+    "b44": "Sany",
+    "b45": "Scania",
+    "b46": "Shacman",
+    "b47": "Sinotruk",
+    "b48": "Sterling",
+    "b49": "Swaraj Mazda Limited",
+    "b50": "Tata",
+    "b51": "Tatra",
+    "b52": "UD Trucks",
+    "b53": "Volkswagen",
+    "b54": "Volvo",
+    "b55": "Western Star",
+    "b56": "Yan An/Shaanxi Auto",
+    "b57": "BYD",
+    "b58": "BMC",
+    "b59": "Sitrak",
+    "b60": "Blank",
+    "b61": "Blank",
+    "b62": "Blank",
+    "b63": "Blank",
+    "b64": "Blank",
+    "b65": "Blank",
+    "b66": "Blank",
+    "b95": "Other",
+    "b96": "Other",
+    "b97": "Other"
+}
+
+VALID_BRAND_CODES = list(MASTER_BRANDS.keys())
 # -------------------------------------------------------------------
 # Generic helper validators
 # -------------------------------------------------------------------
@@ -844,7 +923,29 @@ else:
             "Issue"
         ]
     )
+    
+# -------------------------------------------------------------------
+# adhoc_electric_pref validation
+# Must contain valid master brand code
+# -------------------------------------------------------------------
+if "adhoc_electric_pref" in df.columns:
 
+    for i in df.index:
+
+        val = df.loc[i, "adhoc_electric_pref"]
+
+        if is_blank(val):
+            continue
+
+        sval = str(val).strip().lower()
+
+        if sval not in VALID_BRAND_CODES:
+
+            add_issue(
+                0,
+                f"adhoc_electric_pref invalid brand code: {val}",
+                i
+            )
 # -------------------------------------------------------------------
 # Display results
 # -------------------------------------------------------------------
