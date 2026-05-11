@@ -291,6 +291,8 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_last_axle": [1,2,3,4,5,6,7,8,9,10,11],
 
     "adhoc_price_last_cab": [1,2,3],
+    
+    "adhoc_consideration_china": [1,2,3,4,5],
 
     "adhoc_ch_fueltypes": list(range(1,15)),
 
@@ -506,6 +508,11 @@ china_barr_cols = [
     c for c in df.columns
     if c.startswith("adhoc_ch_barr_")
 ]
+
+china_barr_cols1 = [
+    c for c in df.columns
+    if c.startswith("adhoc_main_barr_china")
+]
 # -------------------------------------------------------------------
 # Rule 0 – Basic validation
 # -------------------------------------------------------------------
@@ -632,6 +639,7 @@ validate_binary_prefix("image_")
 validate_scale_prefix("sustainability_qualities_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
+validate_scale_prefix("adhoc_make_origin_", [1,2,3])
 
 # -------------------------------------------------------------------
 # Truck quantity validation
@@ -880,6 +888,13 @@ require_any_answer(
     19,
     "adhoc_ch_barr missing"
 )
+
+require_any_answer(
+    df["adhoc_consideration_china"].isin([4,5]),
+    china_barr_cols1,
+    20,
+    "adhoc_main_barr_china missing"
+)
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
@@ -953,7 +968,7 @@ st.subheader("Survey Logic Issues")
 
 if results_df.empty:
 
-    st.success("✅ No issues found – dataset follows survey logic.")
+    st.success("No issues found – dataset follows survey logic.")
 
 else:
 
