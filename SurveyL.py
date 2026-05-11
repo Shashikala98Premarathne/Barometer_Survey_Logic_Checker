@@ -255,12 +255,14 @@ VARIABLE_STRUCTURE = {
     "safety_SF1": [1,2,3,4,5],
     "safety_SF4": [1,2,3,4,5],
 
-    "replacement_interval_2": list(range(1,13)),
+    "replacement_interval": "numeric",
+    "replacement_interval_2": "numeric",
 
     "adhoc_ch_consideration": [1,2,3,4,5],
 
 }
 
+# -------------------------------------------------------------------
 # -------------------------------------------------------------------
 # Rule 0 – Basic range validation
 # -------------------------------------------------------------------
@@ -270,17 +272,37 @@ for col, allowed in VARIABLE_STRUCTURE.items():
         add_issue(1, f"Missing variable: {col}")
         continue
 
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+    # ---------------------------------------------------------------
+    # Numeric-only validation
+    # ---------------------------------------------------------------
+    if allowed == "numeric":
 
-    invalid_mask = ~df[col].isin(allowed) & df[col].notna()
+        vals = pd.to_numeric(df[col], errors="coerce")
 
-    for i in df[invalid_mask].index:
-        add_issue(
-            0,
-            f"{col} contains invalid value {df.loc[i, col]}",
-            i
-        )
+        invalid_mask = vals.isna() & df[col].notna()
 
+        for i in df[invalid_mask].index:
+            add_issue(
+                0,
+                f"{col} must be numeric",
+                i
+            )
+
+    # ---------------------------------------------------------------
+    # Standard coded validation
+    # ---------------------------------------------------------------
+    else:
+
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+        invalid_mask = ~df[col].isin(allowed) & df[col].notna()
+
+        for i in df[invalid_mask].index:
+            add_issue(
+                0,
+                f"{col} contains invalid value {df.loc[i, col]}",
+                i
+            )
 # -------------------------------------------------------------------
 # Fleet size validation
 # -------------------------------------------------------------------
