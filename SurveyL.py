@@ -312,9 +312,42 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_last_disp": "numeric",
     "adhoc_price_cost": "numeric",
     "adhoc_price_last_weight": "numeric",
+    
+    "adhoc_price_last": [0,1],
+
+    "adhoc_price_last_type": [1,2],
+
+    "adhoc_price_last_axle": [1,2,3,4,5,6,7,8,9,10,11],
+
+    "adhoc_price_last_engine": "numeric",
+    "adhoc_price_last_disp": "numeric",
+
+    "adhoc_price_last_cab": [1,2,3],
+
+    "adhoc_price_cost": "numeric",
+
+    "adhoc_price_last_weight": "numeric",
 }
 
+# -------------------------------------------------------------------
+# Dynamic pricing comparison variables
+# -------------------------------------------------------------------
 
+PRICE_BRANDS = [
+    "b9","b27","b35","b36","b43",
+    "b45","b54","b30","b24","b50",
+    "b19","b20","b29","b33","b41",
+    "b46","b47","b52"
+]
+
+for b in PRICE_BRANDS:
+
+    VARIABLE_STRUCTURE[f"adhoc_price_comp_{b}"] = [1,2,3]
+
+    VARIABLE_STRUCTURE[f"adhoc_price_comp_less_{b}"] = "numeric"
+
+    VARIABLE_STRUCTURE[f"adhoc_price_comp_more_{b}"] = "numeric"
+    
 # -------------------------------------------------------------------
 # Master Brand Mapping
 # -------------------------------------------------------------------
@@ -996,6 +1029,129 @@ else:
         ]
     )
     
+# -------------------------------------------------------------------
+# Adhoc pricing logic
+# -------------------------------------------------------------------
+
+# ---------------------------------------------------------------
+# Core mandatory pricing vars
+# If adhoc_last_purchase = 1
+# ---------------------------------------------------------------
+price_required_cols = [
+    "adhoc_price_last",
+    "adhoc_price_last_type",
+    "adhoc_price_last_axle",
+    "adhoc_price_last_engine",
+    "adhoc_price_last_disp",
+    "adhoc_price_last_cab",
+    "adhoc_price_cost",
+    "adhoc_price_last_weight"
+]
+
+if "adhoc_last_purchase" in df.columns:
+
+    trigger = df["adhoc_last_purchase"] == 1
+
+    for c in price_required_cols:
+
+        if c not in df.columns:
+            add_issue(
+                1,
+                f"Missing variable: {c}"
+            )
+            continue
+
+        bad = (
+            trigger
+            &
+            df[c].apply(is_blank)
+        )
+
+        for i in df[bad].index:
+
+            add_issue(
+                0,
+                f"{c} required when adhoc_last_purchase=1",
+                i
+            )
+
+# ---------------------------------------------------------------
+# Brand comparison logic
+# ---------------------------------------------------------------
+brand_codes = [
+    "b9","b27","b35","b36","b43",
+    "b45","b54","b30","b24","b50",
+    "b19","b20","b29","b33","b41",
+    "b46","b47","b52"
+]
+
+for b in brand_codes:
+
+    comp_col = f"adhoc_price_comp_{b}"
+    less_col = f"adhoc_price_comp_less_{b}"
+    more_col = f"adhoc_price_comp_more_{b}"
+
+    # -----------------------------------------------------------
+    # Main comparison required
+    # -----------------------------------------------------------
+    if comp_col in df.columns:
+
+        trigger = (
+            df["adhoc_last_purchase"] == 1
+        )
+
+        bad = (
+            trigger
+            &
+            df[comp_col].apply(is_blank)
+        )
+
+        for i in df[bad].index:
+
+            add_issue(
+                0,
+                f"{comp_col} required when adhoc_last_purchase=1",
+                i
+            )
+
+        # -------------------------------------------------------
+        # LESS logic
+        # -------------------------------------------------------
+        if less_col in df.columns:
+
+            bad_less = (
+                (df[comp_col] == 1)
+                &
+                df[less_col].apply(is_blank)
+            )
+
+            for i in df[bad_less].index:
+
+                add_issue(
+                    0,
+                    f"{less_col} required when {comp_col}=1",
+                    i
+                )
+
+        # -------------------------------------------------------
+        # MORE logic
+        # -------------------------------------------------------
+        if more_col in df.columns:
+
+            bad_more = (
+                (df[comp_col] == 2)
+                &
+                df[more_col].apply(is_blank)
+            )
+
+            for i in df[bad_more].index:
+
+                add_issue(
+                    0,
+                    f"{more_col} required when {comp_col}=2",
+                    i
+                )
+                   
 # -------------------------------------------------------------------
 # Display results
 # -------------------------------------------------------------------
