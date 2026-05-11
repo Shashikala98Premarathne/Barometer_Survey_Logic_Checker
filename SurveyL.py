@@ -225,10 +225,11 @@ VARIABLE_STRUCTURE = {
     "goodsvolume": [1,2,3,4,5],
     "freightrates": [1,2,3],
     "profitability": [1,2,3,4,5],
-    
+
     "transport_increase": "numeric_non_negative",
 
     "consideration_china": [1,2,3,4,5],
+
     "business_situation": [1,2,3],
     "business_expectations": [1,2,3],
 
@@ -262,28 +263,125 @@ VARIABLE_STRUCTURE = {
 
     "adhoc_ch_consideration": [1,2,3,4,5],
 
+    "fueltypes_mostlikely": [1,2,3,4,5,6,7,8,9,10,11,12,95,99],
+
+    "business_operations": [1,2,3,4,5,6,7,8,9,10,11,12,13,98,99],
+
+    "sustainability_transport": [1,2,3,4,5,6,7,8,9,10,11,12,95,99],
+
+    "adhoc_erange_modify": [1,2],
+
+    "adhoc_fuel_transfer": [1,2],
+    "adhoc_business_transfer": [1,2],
+
+    "adhoc_cat_configs": [1,2,3],
+
+    "adhoc_gs_gs1": [1,2],
+
+    "adhoc_last_purchase": [1,2,3,4],
+
+    "adhoc_price_last_type": [1,2],
+
+    "adhoc_price_last_axle": [1,2,3,4,5,6,7,8,9,10,11],
+
+    "adhoc_price_last_cab": [1,2,3],
+
+    "adhoc_ch_fueltypes": list(range(1,15)),
+
+    "gas_mileage": "numeric",
+
+    "adhoc_trucks_1shift": "numeric",
+    "adhoc_erange_dist": "numeric",
+    "adhoc_erange_load": "numeric",
+
+    "adhoc_erange_configs_prop_1": "numeric",
+    "adhoc_erange_configs_prop_2": "numeric",
+    "adhoc_erange_configs_prop_3": "numeric",
+
+    "adhoc_price_last_engine": "numeric",
+    "adhoc_price_last_disp": "numeric",
+    "adhoc_price_cost": "numeric",
+    "adhoc_price_last_weight": "numeric",
 }
+
 # -------------------------------------------------------------------
-# Rule 0 – Basic range validation
+# Generic helper validators
+# -------------------------------------------------------------------
+def validate_binary_prefix(prefix):
+
+    cols = [c for c in df.columns if c.startswith(prefix)]
+
+    for c in cols:
+
+        vals = pd.to_numeric(df[c], errors="coerce")
+
+        invalid = (
+            ~vals.isin([0,1])
+            &
+            vals.notna()
+        )
+
+        for i in df[invalid].index:
+            add_issue(
+                0,
+                f"{c} invalid (allowed 0,1)",
+                i
+            )
+
+def validate_scale_prefix(prefix, allowed):
+
+    cols = [c for c in df.columns if c.startswith(prefix)]
+
+    for c in cols:
+
+        vals = pd.to_numeric(df[c], errors="coerce")
+
+        invalid = (
+            ~vals.isin(allowed)
+            &
+            vals.notna()
+        )
+
+        for i in df[invalid].index:
+            add_issue(
+                0,
+                f"{c} invalid value",
+                i
+            )
+
+def require_any_answer(trigger_mask, cols, rule_id, msg):
+
+    for i in df[trigger_mask].index:
+
+        any_answer = False
+
+        for c in cols:
+
+            if c in df.columns:
+
+                if not is_blank(df.loc[i, c]):
+                    any_answer = True
+                    break
+
+        if not any_answer:
+            add_issue(rule_id, msg, i)
+
+# -------------------------------------------------------------------
+# Rule 0 – Basic validation
 # -------------------------------------------------------------------
 for col, allowed in VARIABLE_STRUCTURE.items():
 
-    # ---------------------------------------------------------------
-    # Check variable exists
-    # ---------------------------------------------------------------
     if col not in df.columns:
         add_issue(1, f"Missing variable: {col}")
         continue
 
-    # ---------------------------------------------------------------
-    # Numeric only validation
-    # ---------------------------------------------------------------
     if allowed == "numeric":
 
         vals = pd.to_numeric(df[col], errors="coerce")
 
         invalid_mask = (
-            vals.isna() &
+            vals.isna()
+            &
             df[col].apply(lambda v: not is_blank(v))
         )
 
@@ -294,9 +392,6 @@ for col, allowed in VARIABLE_STRUCTURE.items():
                 i
             )
 
-    # ---------------------------------------------------------------
-    # Numeric and >= 0 validation
-    # ---------------------------------------------------------------
     elif allowed == "numeric_non_negative":
 
         vals = pd.to_numeric(df[col], errors="coerce")
@@ -305,7 +400,8 @@ for col, allowed in VARIABLE_STRUCTURE.items():
             df[col].apply(lambda v: not is_blank(v))
             &
             (
-                vals.isna() |
+                vals.isna()
+                |
                 (vals < 0)
             )
         )
@@ -317,9 +413,6 @@ for col, allowed in VARIABLE_STRUCTURE.items():
                 i
             )
 
-    # ---------------------------------------------------------------
-    # Standard coded validation
-    # ---------------------------------------------------------------
     else:
 
         vals = pd.to_numeric(df[col], errors="coerce")
@@ -336,6 +429,7 @@ for col, allowed in VARIABLE_STRUCTURE.items():
                 f"{col} contains invalid value {df.loc[i, col]}",
                 i
             )
+
 # -------------------------------------------------------------------
 # Fleet size validation
 # -------------------------------------------------------------------
@@ -343,26 +437,60 @@ if "fleetsize" in df.columns:
 
     vals = pd.to_numeric(df["fleetsize"], errors="coerce")
 
-    for i in df[vals.isna()].index:
-        add_issue(2, "Invalid fleetsize", i)
-
-    for i in df[(vals < 0) | (vals > 99999)].index:
-        add_issue(2, "fleetsize out of range 0-99999", i)
-
-# -------------------------------------------------------------------
-# Truck fleet validation
-# -------------------------------------------------------------------
-truckfleet_cols = [c for c in df.columns if c.startswith("truckfleet_b")]
-
-for c in truckfleet_cols:
-
-    vals = pd.to_numeric(df[c], errors="coerce")
-
-    invalid = ~vals.isin([0,1]) & vals.notna()
+    invalid = (
+        vals.isna()
+        |
+        (vals < 0)
+        |
+        (vals > 99999)
+    )
 
     for i in df[invalid].index:
-        add_issue(0, f"{c} invalid (allowed 0,1)", i)
+        add_issue(
+            2,
+            "fleetsize invalid",
+            i
+        )
 
+# -------------------------------------------------------------------
+# Binary validations
+# -------------------------------------------------------------------
+validate_binary_prefix("truckfleet_b")
+validate_binary_prefix("fueltypes_consideration_")
+validate_binary_prefix("trucks_consideration_b")
+validate_binary_prefix("electric_consideration_")
+validate_binary_prefix("electric_applications_")
+validate_binary_prefix("electric_barriers_")
+validate_binary_prefix("sustainability_alternatives_")
+validate_binary_prefix("adhoc_electric_consider_attr_")
+validate_binary_prefix("adhoc_electric_use_")
+validate_binary_prefix("adhoc_electric_barr_")
+validate_binary_prefix("adhoc_electric_future_attr_")
+validate_binary_prefix("adhoc_dist_cat_")
+validate_binary_prefix("adhoc_erange_configs_")
+validate_binary_prefix("adhoc_erange_charge_when_")
+validate_binary_prefix("adhoc_erange_charge_where_")
+validate_binary_prefix("adhoc_barr_china_")
+validate_binary_prefix("adhoc_reason_china_")
+validate_binary_prefix("gas_consideration_")
+validate_binary_prefix("gas_applications_")
+validate_binary_prefix("gas_barriers_")
+validate_binary_prefix("gas_fuel_reason_")
+validate_binary_prefix("adhoc_gs_gs2_")
+validate_binary_prefix("adhoc_gs_gs3_")
+validate_binary_prefix("safety_SF2_")
+validate_binary_prefix("safety_SF5_")
+validate_binary_prefix("adhoc_ch_barr_")
+validate_binary_prefix("adhoc_ch_reason_")
+validate_binary_prefix("adhoc_ch_unaided_aware_")
+validate_binary_prefix("image_")
+
+# -------------------------------------------------------------------
+# Scale validations
+# -------------------------------------------------------------------
+validate_scale_prefix("sustainability_qualities_", [1,2,3,4,5])
+validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
+validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 
 # -------------------------------------------------------------------
 # Truck quantity validation
@@ -374,20 +502,20 @@ truckqty_cols = [
 
 for c in truckqty_cols:
 
-    # Convert to numeric
     vals = pd.to_numeric(df[c], errors="coerce")
 
-    # ---------------------------------------------------------------
-    # ONLY validate real entered values
-    # Ignore blanks / #NULL! / NaN
-    # ---------------------------------------------------------------
-    has_real_value = df[c].apply(lambda v: not is_blank(v))
+    has_real_value = df[c].apply(
+        lambda v: not is_blank(v)
+    )
 
     invalid = (
-        has_real_value &
+        has_real_value
+        &
         (
-            vals.isna() |
-            (vals < 0) |
+            vals.isna()
+            |
+            (vals < 0)
+            |
             (vals > 999)
         )
     )
@@ -396,18 +524,21 @@ for c in truckqty_cols:
 
         add_issue(
             0,
-            f"{c} invalid quantity (must be 0–999)",
+            f"{c} invalid quantity (0-999)",
             i
         )
+
 # -------------------------------------------------------------------
-# Truck quantity sum = fleetsize
+# Truck quantity sum
 # -------------------------------------------------------------------
 if "fleetsize" in df.columns and truckqty_cols:
 
-    qty_sum = df[truckqty_cols].apply(
-        pd.to_numeric,
-        errors="coerce"
-    ).fillna(0).sum(axis=1)
+    qty_sum = (
+        df[truckqty_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+        .sum(axis=1)
+    )
 
     fleetsize = pd.to_numeric(
         df["fleetsize"],
@@ -425,13 +556,25 @@ if "fleetsize" in df.columns and truckqty_cols:
 
 # -------------------------------------------------------------------
 # Main supplier logic
-# Ask if more than one truckfleet brand selected
 # -------------------------------------------------------------------
-if "mainsupplier" in df.columns and truckfleet_cols:
+truckfleet_cols = [
+    c for c in df.columns
+    if c.startswith("truckfleet_b")
+]
 
-    fleet_sum = df[truckfleet_cols].fillna(0).sum(axis=1)
+if "mainsupplier" in df.columns:
 
-    bad = (fleet_sum > 1) & df["mainsupplier"].isna()
+    fleet_sum = (
+        df[truckfleet_cols]
+        .fillna(0)
+        .sum(axis=1)
+    )
+
+    bad = (
+        (fleet_sum > 1)
+        &
+        df["mainsupplier"].isna()
+    )
 
     for i in df[bad].index:
         add_issue(
@@ -441,303 +584,74 @@ if "mainsupplier" in df.columns and truckfleet_cols:
         )
 
 # -------------------------------------------------------------------
-# Fuel consideration logic
+# Logic validations
 # -------------------------------------------------------------------
-fuel_cols = [
-    c for c in df.columns
-    if c.startswith("fueltypes_consideration_")
-]
-
-if "outlook_1" in df.columns and "outlook_2" in df.columns:
-
-    trigger = (
-        (df["outlook_1"] == 1) |
+require_any_answer(
+    (
+        (df["outlook_1"] == 1)
+        |
         (df["outlook_2"] == 1)
-    )
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in fuel_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                6,
-                "fueltypes_consideration required",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Trucks consideration type logic
-# -------------------------------------------------------------------
-consider_cols = [
-    c for c in df.columns
-    if c.startswith("trucks_consideration_b")
-]
-
-for c in consider_cols:
-
-    m = re.search(r"_b(\d+)$", c)
-
-    if not m:
-        continue
-
-    bid = m.group(1)
-
-    type_col = f"trucks_consideration_type_{bid}"
-
-    if type_col not in df.columns:
-        continue
-
-    bad = (
-        (df[c] == 1) &
-        (df[type_col].isna())
-    )
-
-    for i in df[bad].index:
-        add_issue(
-            7,
-            f"{type_col} required",
-            i
-        )
-
-# -------------------------------------------------------------------
-# Electric consideration logic
-# -------------------------------------------------------------------
-electric_cons_cols = [
-    c for c in df.columns
-    if c.startswith("electric_consideration_")
-]
-
-if "electric_purchase" in df.columns:
-
-    trigger = df["electric_purchase"].isin([3,4,5])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in electric_cons_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                8,
-                "electric_consideration missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Electric barriers logic
-# -------------------------------------------------------------------
-electric_barrier_cols = [
-    c for c in df.columns
-    if c.startswith("electric_barriers_")
-]
-
-if "electric_purchase" in df.columns:
-
-    trigger = df["electric_purchase"].isin([1,2])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in electric_barrier_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                9,
-                "electric_barriers missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Gas application logic
-# -------------------------------------------------------------------
-gas_app_cols = [
-    c for c in df.columns
-    if c.startswith("gas_applications_")
-]
-
-if "gas_purchase" in df.columns:
-
-    trigger = df["gas_purchase"].isin([3,4,5])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in gas_app_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                10,
-                "gas_applications missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Gas barriers logic
-# -------------------------------------------------------------------
-gas_barrier_cols = [
-    c for c in df.columns
-    if c.startswith("gas_barriers_")
-]
-
-if "gas_purchase" in df.columns:
-
-    trigger = df["gas_purchase"].isin([1,2])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in gas_barrier_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                11,
-                "gas_barriers missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Sustainability quality logic
-# -------------------------------------------------------------------
-sustain_cols = [
-    c for c in df.columns
-    if c.startswith("sustainability_qualities_")
-]
-
-if "sustainability_duration" in df.columns:
-
-    trigger = df["sustainability_duration"].isin([1,2,3])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in sustain_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                12,
-                "sustainability_qualities missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Adhoc electric logic
-# -------------------------------------------------------------------
-adhoc_attr_cols = [
-    c for c in df.columns
-    if c.startswith("adhoc_electric_consider_attr_")
-]
-
-if "adhoc_electric_consider" in df.columns:
-
-    trigger = df["adhoc_electric_consider"].isin([3,4,5])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in adhoc_attr_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                13,
-                "adhoc electric attributes missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Safety logic
-# -------------------------------------------------------------------
-sf2_cols = [
-    c for c in df.columns
-    if c.startswith("safety_SF2_")
-]
-
-if "safety_SF1" in df.columns:
-
-    trigger = df["safety_SF1"].isin([4,5])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in sf2_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                14,
-                "safety_SF2 follow-up missing",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Chinese truck logic
-# -------------------------------------------------------------------
-china_barr_cols = [
-    c for c in df.columns
-    if c.startswith("adhoc_ch_barr_")
-]
-
-if "adhoc_ch_consideration" in df.columns:
-
-    trigger = df["adhoc_ch_consideration"].isin([1,2])
-
-    for i in df[trigger].index:
-
-        any_answer = False
-
-        for c in china_barr_cols:
-
-            if not is_blank(df.loc[i, c]):
-                any_answer = True
-                break
-
-        if not any_answer:
-            add_issue(
-                15,
-                "adhoc_ch_barr missing",
-                i
-            )
-
+    ),
+    fuel_cols,
+    6,
+    "fueltypes_consideration required"
+)
+
+require_any_answer(
+    df["electric_purchase"].isin([3,4,5]),
+    electric_cons_cols,
+    8,
+    "electric_consideration missing"
+)
+
+require_any_answer(
+    df["electric_purchase"].isin([1,2]),
+    electric_barrier_cols,
+    9,
+    "electric_barriers missing"
+)
+
+require_any_answer(
+    df["gas_purchase"].isin([3,4,5]),
+    gas_app_cols,
+    10,
+    "gas_applications missing"
+)
+
+require_any_answer(
+    df["gas_purchase"].isin([1,2]),
+    gas_barrier_cols,
+    11,
+    "gas_barriers missing"
+)
+
+require_any_answer(
+    df["sustainability_duration"].isin([1,2,3]),
+    sustain_cols,
+    12,
+    "sustainability_qualities missing"
+)
+
+require_any_answer(
+    df["adhoc_electric_consider"].isin([3,4,5]),
+    adhoc_attr_cols,
+    13,
+    "adhoc electric attributes missing"
+)
+
+require_any_answer(
+    df["safety_SF1"].isin([4,5]),
+    sf2_cols,
+    14,
+    "safety_SF2 follow-up missing"
+)
+
+require_any_answer(
+    df["adhoc_ch_consideration"].isin([1,2]),
+    china_barr_cols,
+    15,
+    "adhoc_ch_barr missing"
+)
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
