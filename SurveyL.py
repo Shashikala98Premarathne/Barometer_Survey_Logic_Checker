@@ -523,10 +523,6 @@ china_barr_cols = [
     if c.startswith("adhoc_ch_barr_")
 ]
 
-china_barr_cols1 = [
-    c for c in df.columns
-    if c.startswith("adhoc_main_barr_china")
-]
 # -------------------------------------------------------------------
 # Rule 0 – Basic validation
 # -------------------------------------------------------------------
@@ -919,12 +915,22 @@ require_any_answer(
     "adhoc_ch_barr missing"
 )
 
-require_any_answer(
-    df["adhoc_consideration_china"].isin([4,5]),
-    china_barr_cols1,
-    21,
-    "adhoc_main_barr_china missing"
-)
+if "adhoc_main_barr_china" in df.columns:
+
+    bad = (
+        df["adhoc_consideration_china"].isin([4,5])
+        &
+        df["adhoc_main_barr_china"].apply(is_blank)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            21,
+            "adhoc_main_barr_china missing",
+            i
+        )
+        
 # adhoc_electric_pref validation
 # Must contain valid master brand code
 # -------------------------------------------------------------------
