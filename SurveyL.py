@@ -438,27 +438,27 @@ def validate_scale_prefix(prefix, allowed):
             
 def require_any_answer(trigger_mask, cols, rule_id, msg):
 
-    for i in df[trigger_mask].index:
+    existing_cols = [
+        c for c in cols
+        if c in df.columns
+    ]
 
-        any_answer = False
+    if not existing_cols:
+        return
 
-        for c in cols:
+    vals = (
+        df[existing_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
 
-            if c in df.columns:
+    any_selected = vals.eq(1).any(axis=1)
 
-                val = df.loc[i, c]
+    bad = trigger_mask & (~any_selected)
 
-                if not is_blank(val):
-
-                    try:
-                        if float(val) == 1:
-                            any_answer = True
-                            break
-                    except:
-                        pass
-
-        if not any_answer:
-            add_issue(rule_id, msg, i)
+    for i in df[bad].index:
+        add_issue(rule_id, msg, i)
+    
 fuel_cols = [
     c for c in df.columns
     if c.startswith("fueltypes_consideration_")
