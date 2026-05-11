@@ -287,8 +287,6 @@ VARIABLE_STRUCTURE = {
     "adhoc_gs_gs1": [1,2],
 
     "adhoc_last_purchase": [1,2,3,4],
-    
-    "adhoc_electric_probability_": [1,2,3,4,5],
 
     "adhoc_price_last_type": [1,2],
 
@@ -463,6 +461,11 @@ electric_app_cols = [
     c for c in df.columns 
     if c.startswith("electric_applications_") ]
 
+electric_cons_cols = [
+    c for c in df.columns
+    if c.startswith("electric_consideration_")
+]
+
 electric_barrier_cols = [
     c for c in df.columns
     if c.startswith("electric_barriers_")
@@ -500,8 +503,9 @@ adhoc_attr_cols3 = [
 
 adhoc_attr_cols4 = [
     c for c in df.columns
-    if c.startswith("adhoc_electric_future_")
+    if c.startswith("adhoc_electric_future_attr_")
 ]
+
 sf2_cols = [
     c for c in df.columns
     if c.startswith("safety_SF2_")
@@ -616,7 +620,6 @@ validate_binary_prefix("adhoc_electric_consider_attr_")
 validate_binary_prefix("adhoc_electric_use_")
 validate_binary_prefix("adhoc_electric_barr_")
 validate_binary_prefix("adhoc_electric_future_attr_")
-validate_binary_prefix("adhoc_dist_cat_")
 validate_binary_prefix("adhoc_erange_configs_")
 validate_binary_prefix("adhoc_erange_charge_when_")
 validate_binary_prefix("adhoc_erange_charge_where_")
@@ -643,6 +646,8 @@ validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_make_origin_", [1,2,3])
 validate_scale_prefix("trucks_consideration_type_",[1,2,3])
+validate_scale_prefix("adhoc_electric_probability_",[1,2,3,4,5])
+
 
 # -------------------------------------------------------------------
 # Truck quantity validation
