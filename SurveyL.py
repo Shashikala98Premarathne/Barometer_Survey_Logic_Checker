@@ -365,7 +365,50 @@ def require_any_answer(trigger_mask, cols, rule_id, msg):
 
         if not any_answer:
             add_issue(rule_id, msg, i)
+fuel_cols = [
+    c for c in df.columns
+    if c.startswith("fueltypes_consideration_")
+]
 
+electric_cons_cols = [
+    c for c in df.columns
+    if c.startswith("electric_consideration_")
+]
+
+electric_barrier_cols = [
+    c for c in df.columns
+    if c.startswith("electric_barriers_")
+]
+
+gas_app_cols = [
+    c for c in df.columns
+    if c.startswith("gas_applications_")
+]
+
+gas_barrier_cols = [
+    c for c in df.columns
+    if c.startswith("gas_barriers_")
+]
+
+sustain_cols = [
+    c for c in df.columns
+    if c.startswith("sustainability_qualities_")
+]
+
+adhoc_attr_cols = [
+    c for c in df.columns
+    if c.startswith("adhoc_electric_consider_attr_")
+]
+
+sf2_cols = [
+    c for c in df.columns
+    if c.startswith("safety_SF2_")
+]
+
+china_barr_cols = [
+    c for c in df.columns
+    if c.startswith("adhoc_ch_barr_")
+]
 # -------------------------------------------------------------------
 # Rule 0 – Basic validation
 # -------------------------------------------------------------------
