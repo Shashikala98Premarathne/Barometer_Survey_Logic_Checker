@@ -263,16 +263,14 @@ VARIABLE_STRUCTURE = {
     "adhoc_ch_consideration": [1,2,3,4,5],
 
 }
-
-# -------------------------------------------------------------------
-# -------------------------------------------------------------------
-# Rule 0 – Basic range validation
-# -------------------------------------------------------------------
 # -------------------------------------------------------------------
 # Rule 0 – Basic range validation
 # -------------------------------------------------------------------
 for col, allowed in VARIABLE_STRUCTURE.items():
 
+    # ---------------------------------------------------------------
+    # Check variable exists
+    # ---------------------------------------------------------------
     if col not in df.columns:
         add_issue(1, f"Missing variable: {col}")
         continue
@@ -284,7 +282,10 @@ for col, allowed in VARIABLE_STRUCTURE.items():
 
         vals = pd.to_numeric(df[col], errors="coerce")
 
-        invalid_mask = vals.isna() & df[col].apply(lambda v: not is_blank(v))
+        invalid_mask = (
+            vals.isna() &
+            df[col].apply(lambda v: not is_blank(v))
+        )
 
         for i in df[invalid_mask].index:
             add_issue(
@@ -301,7 +302,8 @@ for col, allowed in VARIABLE_STRUCTURE.items():
         vals = pd.to_numeric(df[col], errors="coerce")
 
         invalid_mask = (
-            df[col].apply(lambda v: not is_blank(v)) &
+            df[col].apply(lambda v: not is_blank(v))
+            &
             (
                 vals.isna() |
                 (vals < 0)
@@ -320,27 +322,13 @@ for col, allowed in VARIABLE_STRUCTURE.items():
     # ---------------------------------------------------------------
     else:
 
-        df[col] = pd.to_numeric(df[col], errors="coerce")
+        vals = pd.to_numeric(df[col], errors="coerce")
 
         invalid_mask = (
-            ~df[col].isin(allowed) &
-            df[col].notna()
+            ~vals.isin(allowed)
+            &
+            vals.notna()
         )
-
-        for i in df[invalid_mask].index:
-            add_issue(
-                0,
-                f"{col} contains invalid value {df.loc[i, col]}",
-                i
-            )
-    # ---------------------------------------------------------------
-    # Standard coded validation
-    # ---------------------------------------------------------------
-    else:
-
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-        invalid_mask = ~df[col].isin(allowed) & df[col].notna()
 
         for i in df[invalid_mask].index:
             add_issue(
