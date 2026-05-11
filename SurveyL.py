@@ -617,7 +617,9 @@ if "fleetsize" in df.columns and truckqty_cols:
         )
         
 # -------------------------------------------------------------------
-# adhoc_dist_cat sum must equal fleetsize
+# adhoc_dist_cat validation
+# Sum must equal fleetsize
+# Ignore #NULL! / blanks completely
 # -------------------------------------------------------------------
 adhoc_dist_cols = [
     "adhoc_dist_cat_1",
@@ -631,7 +633,52 @@ existing_dist_cols = [
     if c in df.columns
 ]
 
+# ---------------------------------------------------------------
+# Validate individual values
+# ---------------------------------------------------------------
+for c in existing_dist_cols:
+
+    vals = pd.to_numeric(
+        df[c],
+        errors="coerce"
+    )
+
+    has_real_value = df[c].apply(
+        lambda v: not is_blank(v)
+    )
+
+    invalid = (
+        has_real_value
+        &
+        (
+            vals.isna()
+            |
+            (vals < 0)
+        )
+    )
+
+    for i in df[invalid].index:
+
+        add_issue(
+            0,
+            f"{c} must be numeric and >= 0",
+            i
+        )
+
+# ---------------------------------------------------------------
+# Sum validation
+# ONLY check rows where at least one real value exists
+# ---------------------------------------------------------------
 if "fleetsize" in df.columns and existing_dist_cols:
+
+    # Detect rows with real entered values
+    has_any_real = df[existing_dist_cols].apply(
+        lambda row: any(
+            not is_blank(v)
+            for v in row
+        ),
+        axis=1
+    )
 
     dist_sum = (
         df[existing_dist_cols]
@@ -645,41 +692,17 @@ if "fleetsize" in df.columns and existing_dist_cols:
         errors="coerce"
     )
 
-    bad = dist_sum != fleetsize
+    bad = (
+        has_any_real
+        &
+        (dist_sum != fleetsize)
+    )
 
     for i in df[bad].index:
 
         add_issue(
             4,
             "Sum adhoc_dist_cat_1-4 != fleetsize",
-            i
-        )
-# -------------------------------------------------------------------
-# Main supplier logic
-# -------------------------------------------------------------------
-truckfleet_cols = [
-    c for c in df.columns
-    if c.startswith("truckfleet_b")
-]
-
-if "mainsupplier" in df.columns:
-
-    fleet_sum = (
-        df[truckfleet_cols]
-        .fillna(0)
-        .sum(axis=1)
-    )
-
-    bad = (
-        (fleet_sum > 1)
-        &
-        df["mainsupplier"].isna()
-    )
-
-    for i in df[bad].index:
-        add_issue(
-            5,
-            "mainsupplier required",
             i
         )
 
