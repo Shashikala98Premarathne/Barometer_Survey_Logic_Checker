@@ -501,6 +501,7 @@ if "fleetsize" in df.columns:
 validate_binary_prefix("truckfleet_b")
 validate_binary_prefix("fueltypes_consideration_")
 validate_binary_prefix("trucks_consideration_b")
+validate_binary_prefix("trucks_consideration_type_b")
 validate_binary_prefix("electric_consideration_")
 validate_binary_prefix("electric_applications_")
 validate_binary_prefix("electric_barriers_")
