@@ -205,12 +205,13 @@ SURVEY_RULES = {
     7: "Truck consideration type missing",
     8: "Electric consideration logic failed",
     9: "Electric barriers logic failed",
-    10: "Gas application logic failed",
-    11: "Gas barriers logic failed",
-    12: "Sustainability quality logic failed",
-    13: "Adhoc electric logic failed",
-    14: "Safety follow-up missing",
-    15: "Chinese truck logic failed",
+    10: "Electric application logic failed",
+    11: "Gas application logic failed",
+    12: "Gas barriers logic failed",
+    13: "Sustainability quality logic failed",
+    14: "Adhoc electric logic failed",
+    15: "Safety follow-up missing",
+    16: "Chinese truck logic failed",
 }
 
 # -------------------------------------------------------------------
@@ -656,44 +657,51 @@ require_any_answer(
 )
 
 require_any_answer(
+    df["electric_purchase"].isin([3,4,5]),
+    electric_cons_cols,
+    10,
+    "electric_application missing"
+)
+
+require_any_answer(
     df["gas_purchase"].isin([3,4,5]),
     gas_app_cols,
-    10,
+    11,
     "gas_applications missing"
 )
 
 require_any_answer(
     df["gas_purchase"].isin([1,2]),
     gas_barrier_cols,
-    11,
+    12,
     "gas_barriers missing"
 )
 
 require_any_answer(
     df["sustainability_duration"].isin([1,2,3]),
     sustain_cols,
-    12,
+    13,
     "sustainability_qualities missing"
 )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
     adhoc_attr_cols,
-    13,
+    14,
     "adhoc electric attributes missing"
 )
 
 require_any_answer(
     df["safety_SF1"].isin([4,5]),
     sf2_cols,
-    14,
+    15,
     "safety_SF2 follow-up missing"
 )
 
 require_any_answer(
     df["adhoc_ch_consideration"].isin([1,2]),
     china_barr_cols,
-    15,
+    16,
     "adhoc_ch_barr missing"
 )
 # -------------------------------------------------------------------
