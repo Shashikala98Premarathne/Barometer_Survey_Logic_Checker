@@ -435,7 +435,7 @@ def validate_scale_prefix(prefix, allowed):
                 f"{c} invalid value",
                 i
             )
-
+            
 def require_any_answer(trigger_mask, cols, rule_id, msg):
 
     for i in df[trigger_mask].index:
@@ -446,9 +446,16 @@ def require_any_answer(trigger_mask, cols, rule_id, msg):
 
             if c in df.columns:
 
-                if not is_blank(df.loc[i, c]):
-                    any_answer = True
-                    break
+                val = df.loc[i, c]
+
+                if not is_blank(val):
+
+                    try:
+                        if float(val) == 1:
+                            any_answer = True
+                            break
+                    except:
+                        pass
 
         if not any_answer:
             add_issue(rule_id, msg, i)
