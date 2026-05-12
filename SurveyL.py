@@ -312,8 +312,6 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_last_disp": "numeric",
     "adhoc_price_cost": "numeric",
     "adhoc_price_last_weight": "numeric",
-    
-    "adhoc_price_last": [0,1],
 
     "adhoc_price_last_type": [1,2],
 
@@ -964,27 +962,34 @@ if "adhoc_main_barr_china" in df.columns:
             i
         )
         
-# adhoc_electric_pref validation
-# Must contain valid master brand code
-# -------------------------------------------------------------------
-if "adhoc_electric_pref" in df.columns:
+# adhoc_electric_pref/adhoc_price_last validation
+brand_code_vars = [
+    "adhoc_electric_pref",
+    "adhoc_price_last"
+]
 
-    for i in df.index:
+for col in brand_code_vars:
 
-        val = df.loc[i, "adhoc_electric_pref"]
+    if col not in df.columns:
+        continue
 
-        if is_blank(val):
-            continue
+    bad = (
+        ~df[col]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .isin(VALID_BRAND_CODES)
+        &
+        ~df[col].apply(is_blank)
+    )
 
-        sval = str(val).strip().lower()
+    for i in df[bad].index:
 
-        if sval not in VALID_BRAND_CODES:
-
-            add_issue(
-                0,
-                f"adhoc_electric_pref invalid brand code: {val}",
-                i
-            )
+        add_issue(
+            0,
+            f"{col} invalid brand code: {df.loc[i, col]}",
+            i
+        )
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
