@@ -957,23 +957,41 @@ if "adhoc_main_barr_china" in df.columns:
             i
         )
         
-# adhoc_electric_pref/adhoc_price_last validation
+# -------------------------------------------------------------------
+# Brand code normalization + validation
+# -------------------------------------------------------------------
 brand_code_vars = [
     "adhoc_electric_pref",
     "adhoc_price_last"
 ]
+
+def normalize_brand_code(val):
+
+    if is_blank(val):
+        return np.nan
+
+    sval = str(val).strip().lower()
+
+    # already correct
+    if sval.startswith("b"):
+        return sval
+
+    # numeric like 9 / 9.0 / 36
+    try:
+        num = int(float(sval))
+        return f"b{num}"
+    except:
+        return sval
 
 for col in brand_code_vars:
 
     if col not in df.columns:
         continue
 
+    normalized = df[col].apply(normalize_brand_code)
+
     bad = (
-        ~df[col]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-        .isin(VALID_BRAND_CODES)
+        ~normalized.isin(VALID_BRAND_CODES)
         &
         ~df[col].apply(is_blank)
     )
@@ -984,10 +1002,11 @@ for col in brand_code_vars:
             0,
             f"{col} invalid brand code: {df.loc[i, col]}",
             i
-        ) 
-# -------------------------------------------------------------------
-# Adhoc pricing logic
-# -------------------------------------------------------------------
+        )
+
+    # OPTIONAL:
+    # overwrite cleaned values back into dataframe
+    df[col] = normalized
 
 # ---------------------------------------------------------------
 # Core mandatory pricing vars
