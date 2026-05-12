@@ -1050,9 +1050,11 @@ if "adhoc_last_purchase" in df.columns:
                 i
             )
 
-# ---------------------------------------------------------------
+# -------------------------------------------------------------------
 # Brand comparison logic
-# ---------------------------------------------------------------
+# Ask ALL brands except purchased brand
+# -------------------------------------------------------------------
+
 brand_codes = [
     "b9","b27","b35","b36","b43",
     "b45","b54","b30","b24","b50",
@@ -1060,72 +1062,112 @@ brand_codes = [
     "b46","b47","b52"
 ]
 
+# normalize purchased brand
+purchased_brand = (
+    df["adhoc_price_last"]
+    .astype(str)
+    .str.strip()
+    .str.lower()
+)
+
+# convert 9.0 -> b9 etc
+def normalize_brand(val):
+
+    try:
+
+        sval = str(val).strip().lower()
+
+        if sval.startswith("b"):
+            return sval
+
+        return f"b{int(float(sval))}"
+
+    except:
+        return sval
+
+purchased_brand = purchased_brand.apply(normalize_brand)
+
 for b in brand_codes:
 
     comp_col = f"adhoc_price_comp_{b}"
     less_col = f"adhoc_price_comp_less_{b}"
     more_col = f"adhoc_price_comp_more_{b}"
 
+    if comp_col not in df.columns:
+        continue
+
+    # -----------------------------------------------------------
+    # Ask only if:
+    # adhoc_last_purchase = 1
+    # AND purchased brand != current brand
+    # -----------------------------------------------------------
+    trigger = (
+        (pd.to_numeric(
+            df["adhoc_last_purchase"],
+            errors="coerce"
+        ) == 1)
+        &
+        (purchased_brand != b)
+    )
+
     # -----------------------------------------------------------
     # Main comparison required
     # -----------------------------------------------------------
-    if comp_col in df.columns:
+    bad = (
+        trigger
+        &
+        df[comp_col].apply(is_blank)
+    )
 
-        trigger = (
-            df["adhoc_last_purchase"] == 1
+    for i in df[bad].index:
+
+        add_issue(
+            0,
+            f"{comp_col} required when purchased brand != {b}",
+            i
         )
 
-        bad = (
+    # -----------------------------------------------------------
+    # LESS logic
+    # -----------------------------------------------------------
+    if less_col in df.columns:
+
+        bad_less = (
             trigger
             &
-            df[comp_col].apply(is_blank)
+            (pd.to_numeric(df[comp_col], errors="coerce") == 1)
+            &
+            df[less_col].apply(is_blank)
         )
 
-        for i in df[bad].index:
+        for i in df[bad_less].index:
 
             add_issue(
                 0,
-                f"{comp_col} required when adhoc_last_purchase=1",
+                f"{less_col} required when {comp_col}=1",
                 i
             )
 
-        # -------------------------------------------------------
-        # LESS logic
-        # -------------------------------------------------------
-        if less_col in df.columns:
+    # -----------------------------------------------------------
+    # MORE logic
+    # -----------------------------------------------------------
+    if more_col in df.columns:
 
-            bad_less = (
-                (df[comp_col] == 1)
-                &
-                df[less_col].apply(is_blank)
+        bad_more = (
+            trigger
+            &
+            (pd.to_numeric(df[comp_col], errors="coerce") == 2)
+            &
+            df[more_col].apply(is_blank)
+        )
+
+        for i in df[bad_more].index:
+
+            add_issue(
+                0,
+                f"{more_col} required when {comp_col}=2",
+                i
             )
-
-            for i in df[bad_less].index:
-
-                add_issue(
-                    0,
-                    f"{less_col} required when {comp_col}=1",
-                    i
-                )
-
-        # -------------------------------------------------------
-        # MORE logic
-        # -------------------------------------------------------
-        if more_col in df.columns:
-
-            bad_more = (
-                (df[comp_col] == 2)
-                &
-                df[more_col].apply(is_blank)
-            )
-
-            for i in df[bad_more].index:
-
-                add_issue(
-                    0,
-                    f"{more_col} required when {comp_col}=2",
-                    i
-                )
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
