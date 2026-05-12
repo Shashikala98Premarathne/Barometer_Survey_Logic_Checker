@@ -535,9 +535,14 @@ if (
 # -------------------------------------------------------------------
 
 COUNTRY_MAP = {
-    1: "Australia",
-    2: "South Africa",
-    3: "South Korea"
+    1: "France",
+    2: "Germany",
+    3: "Spain",
+    4: "Poland",
+    5: "South Korea",
+    6: "South Africa",
+    7: "Australia",
+    8: "China"
 }
 
 # ---------------------------------------------------------------
