@@ -245,7 +245,7 @@ VARIABLE_STRUCTURE = {
     "business_distance": [1,2,3],
 
     "business_sustain": [1,2,3],
-    "business_climate": [1,2,3,9],
+    "business_climate": [1,2,3,4],
 
     "country": [1,2,3,4,5,6,7,8],
 
