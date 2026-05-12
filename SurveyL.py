@@ -726,6 +726,7 @@ if (
 
 # -------------------------------------------------------------------
 # Validate pricing comparison brands by country
+# ONLY validate when question actually answered
 # -------------------------------------------------------------------
 
 if "countryquestion" in df.columns:
@@ -737,10 +738,15 @@ if "countryquestion" in df.columns:
         if comp_col not in df.columns:
             continue
 
-        for i in df.index:
+        # -----------------------------------------------------------
+        # detect rows where question was actually answered
+        # -----------------------------------------------------------
+        answered = ~df[comp_col].apply(is_blank)
 
-            if is_blank(df.loc[i, comp_col]):
-                continue
+        if not answered.any():
+            continue
+
+        for i in df[answered].index:
 
             country_code = pd.to_numeric(
                 df.loc[i, "countryquestion"],
@@ -761,6 +767,7 @@ if "countryquestion" in df.columns:
                     f"{comp_col} not valid in {country_name}",
                     i
                 )
+
 
 VALID_BRAND_CODES = list(MASTER_BRANDS.keys())
 # -------------------------------------------------------------------
