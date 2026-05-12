@@ -317,8 +317,6 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_last_cab": [1,2,3],
 
     "adhoc_price_cost": "numeric",
-
-    "adhoc_price_last_weight": "numeric",
 }
 
 # -------------------------------------------------------------------
@@ -1191,6 +1189,208 @@ for b in brand_codes:
                 f"{more_col} required when {comp_col}=2",
                 i
             )
+        
+# -------------------------------------------------------------------
+# safety_SF3 required if >1 answer selected in safety_SF2
+# -------------------------------------------------------------------
+
+sf2_cols = [
+    "safety_SF2_1",
+    "safety_SF2_2",
+    "safety_SF2_3",
+    "safety_SF2_4",
+    "safety_SF2_5",
+    "safety_SF2_6",
+    "safety_SF2_7",
+    "safety_SF2_98"
+]
+
+existing_sf2_cols = [
+    c for c in sf2_cols
+    if c in df.columns
+]
+
+if (
+    "safety_SF3" in df.columns
+    and existing_sf2_cols
+):
+
+    sf2_numeric = (
+        df[existing_sf2_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    # count number of selected options
+    sf2_count = sf2_numeric.eq(1).sum(axis=1)
+
+    # trigger if more than one selected
+    trigger = sf2_count > 1
+
+    bad = (
+        trigger
+        &
+        df["safety_SF3"].apply(is_blank)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            0,
+            "safety_SF3 required when multiple safety_SF2 selected",
+            i
+        )
+
+# -------------------------------------------------------------------
+# safety_SF5 required if safety_SF4 = 1,2,3
+# -------------------------------------------------------------------
+
+sf5_cols = [
+    c for c in df.columns
+    if c.startswith("safety_SF5_")
+]
+
+if sf5_cols and "safety_SF4" in df.columns:
+
+    sf5_numeric = (
+        df[sf5_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    any_sf5_selected = sf5_numeric.eq(1).any(axis=1)
+
+    trigger = df["safety_SF4"].isin([1,2,3])
+
+    bad = (
+        trigger
+        &
+        (~any_sf5_selected)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            0,
+            "At least one safety_SF5 option required when safety_SF4=1,2,3",
+            i
+        )
+        
+# -------------------------------------------------------------------
+# Chinese truck barrier / reason logic
+# -------------------------------------------------------------------
+
+adhoc_ch_barr_cols = [
+    c for c in df.columns
+    if c.startswith("adhoc_ch_barr_")
+]
+
+adhoc_ch_reason_cols = [
+    c for c in df.columns
+    if c.startswith("adhoc_ch_reason_")
+]
+
+# ---------------------------------------------------------------
+# Barrier logic
+# If adhoc_ch_consideration = 1,2
+# ---------------------------------------------------------------
+if (
+    "adhoc_ch_consideration" in df.columns
+    and adhoc_ch_barr_cols
+):
+
+    barr_numeric = (
+        df[adhoc_ch_barr_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    any_barr = barr_numeric.eq(1).any(axis=1)
+
+    trigger_barr = (
+        df["adhoc_ch_consideration"]
+        .isin([1,2])
+    )
+
+    bad_barr = (
+        trigger_barr
+        &
+        (~any_barr)
+    )
+
+    for i in df[bad_barr].index:
+
+        add_issue(
+            20,
+            "adhoc_ch_barr required when adhoc_ch_consideration=1,2",
+            i
+        )
+
+# ---------------------------------------------------------------
+# Reason logic
+# If adhoc_ch_consideration = 3,4,5
+# ---------------------------------------------------------------
+if (
+    "adhoc_ch_consideration" in df.columns
+    and adhoc_ch_reason_cols
+):
+
+    reason_numeric = (
+        df[adhoc_ch_reason_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    any_reason = reason_numeric.eq(1).any(axis=1)
+
+    trigger_reason = (
+        df["adhoc_ch_consideration"]
+        .isin([3,4,5])
+    )
+
+    bad_reason = (
+        trigger_reason
+        &
+        (~any_reason)
+    )
+
+    for i in df[bad_reason].index:
+
+        add_issue(
+            20,
+            "adhoc_ch_reason required when adhoc_ch_consideration=3,4,5",
+            i
+        )
+        
+# -------------------------------------------------------------------
+# adhoc_ch_fueltypes required
+# If adhoc_ch_consideration = 3,4,5
+# -------------------------------------------------------------------
+
+if (
+    "adhoc_ch_consideration" in df.columns
+    and "adhoc_ch_fueltypes" in df.columns
+):
+
+    trigger = (
+        df["adhoc_ch_consideration"]
+        .isin([3,4,5])
+    )
+
+    bad = (
+        trigger
+        &
+        df["adhoc_ch_fueltypes"].apply(is_blank)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            20,
+            "adhoc_ch_fueltypes required when adhoc_ch_consideration=3,4,5",
+            i
+        )
+
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
@@ -1234,7 +1434,7 @@ else:
             "Issue"
         ]
     )
-                      
+                         
 # -------------------------------------------------------------------
 # Display results
 # -------------------------------------------------------------------
