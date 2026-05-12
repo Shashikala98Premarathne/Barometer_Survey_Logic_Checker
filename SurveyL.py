@@ -189,6 +189,15 @@ def add_issue(rule_id, msg, idx=None):
 
     if idx is not None:
         detailed.append((idx, rule_id, msg))
+def add_issues_from_mask(mask, rule_id, msg):
+
+    for i in df[mask].index:
+
+        add_issue(
+            rule_id,
+            msg,
+            i
+        )
 
 # -------------------------------------------------------------------
 # Rules dictionary
@@ -412,6 +421,346 @@ MASTER_BRANDS = {
     "b96": "Other",
     "b97": "Other"
 }
+
+PRICE_MODELS = {
+    "m2": "b35",
+    "m3": "b35",
+    "m4": "b35",
+
+    "mb1": "b36",
+    "mb3": "b36",
+
+    "s1": "b45",
+    "s2": "b45",
+    "s3": "b45",
+    "s4": "b45",
+
+    "v3": "b54",
+    "v4": "b54",
+    "v5": "b54",
+
+    "k1": "b30",
+    "k2": "b30",
+    "k3": "b30",
+    "k4": "b30",
+    "k5": "b30",
+    "k6": "b30",
+
+    "hy1": "b24",
+
+    "t1": "b50",
+
+    "d2": "b9",
+    "d3": "b9",
+
+    "fu1": "b19",
+    "fu2": "b19",
+
+    "h1": "b20",
+    "h2": "b20",
+
+    "i4": "b27",
+
+    "f1": "b29",
+
+    "ma1": "b33",
+
+    "p1": "b41",
+
+    "sm1": "b46",
+    "sm2": "b46",
+
+    "st1": "b47",
+
+    "ud1": "b52"
+}
+
+if "adhoc_price_last_model" in df.columns:
+
+    normalized_model = (
+        df["adhoc_price_last_model"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    bad = (
+        ~normalized_model.isin(PRICE_MODELS.keys())
+        &
+        ~df["adhoc_price_last_model"].apply(is_blank)
+    )
+
+    add_issues_from_mask(
+        bad,
+        0,
+        "adhoc_price_last_model invalid model code"
+    )
+
+if (
+    "adhoc_price_last" in df.columns
+    and "adhoc_price_last_model" in df.columns
+):
+
+    normalized_brand = (
+        df["adhoc_price_last"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    normalized_model = (
+        df["adhoc_price_last_model"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    expected_brand = normalized_model.map(PRICE_MODELS)
+
+    bad = (
+        normalized_model.notna()
+        &
+        normalized_brand.notna()
+        &
+        (expected_brand != normalized_brand)
+    )
+
+    add_issues_from_mask(
+        bad,
+        0,
+        "adhoc_price_last_model does not match selected brand"
+    )
+# -------------------------------------------------------------------
+# Country routing for pricing brands/models
+# -------------------------------------------------------------------
+
+COUNTRY_MAP = {
+    1: "Australia",
+    2: "South Africa",
+    3: "South Korea"
+}
+
+# ---------------------------------------------------------------
+# Model country availability
+# ---------------------------------------------------------------
+MODEL_COUNTRY_MAP = {
+
+    # MAN
+    "m2": ["Australia"],
+    "m3": ["Australia", "South Africa"],
+    "m4": ["Australia", "South Africa", "South Korea"],
+
+    # Mercedes
+    "mb1": ["Australia"],
+    "mb3": ["Australia", "South Africa"],
+
+    # Scania
+    "s1": ["Australia"],
+    "s2": ["Australia", "South Africa", "South Korea"],
+    "s3": ["Australia", "South Africa", "South Korea"],
+    "s4": ["Australia", "South Africa", "South Korea"],
+
+    # Volvo
+    "v3": ["Australia", "South Africa"],
+    "v4": ["Australia", "South Africa", "South Korea"],
+    "v5": ["Australia", "South Africa", "South Korea"],
+
+    # Kenworth
+    "k1": ["Australia"],
+    "k2": ["Australia"],
+    "k3": ["Australia"],
+    "k4": ["Australia"],
+    "k5": ["Australia"],
+    "k6": ["Australia"],
+
+    # Hyundai
+    "hy1": ["South Korea"],
+
+    # Tata
+    "t1": ["Australia", "South Africa", "South Korea"],
+
+    # DAF
+    "d2": ["Australia"],
+    "d3": ["Australia"],
+
+    # Fuso
+    "fu1": ["Australia"],
+    "fu2": ["Australia"],
+
+    # Hino
+    "h1": ["Australia"],
+    "h2": ["Australia"],
+
+    # Iveco
+    "i4": ["South Korea"],
+
+    # FAW
+    "f1": ["South Africa"],
+
+    # Mack
+    "ma1": ["Australia"],
+
+    # Powerstar
+    "p1": ["South Africa"],
+
+    # Shacman
+    "sm1": ["South Africa"],
+    "sm2": ["South Africa"],
+
+    # Sinotruk
+    "st1": ["South Africa"],
+
+    # UD
+    "ud1": ["Australia", "South Africa"]
+}
+
+# ---------------------------------------------------------------
+# Brand country availability
+# ---------------------------------------------------------------
+BRAND_COUNTRY_MAP = {
+
+    "b35": ["Australia", "South Africa", "South Korea"],  # MAN
+    "b36": ["Australia", "South Africa"],                 # Mercedes
+    "b45": ["Australia", "South Africa", "South Korea"],  # Scania
+    "b54": ["Australia", "South Africa", "South Korea"],  # Volvo
+    "b30": ["Australia"],                                 # Kenworth
+    "b24": ["South Korea"],                               # Hyundai
+    "b50": ["Australia", "South Africa", "South Korea"],  # Tata
+    "b9": ["Australia"],                                  # DAF
+    "b19": ["Australia"],                                 # Fuso
+    "b20": ["Australia"],                                 # Hino
+    "b27": ["South Korea"],                               # Iveco
+    "b29": ["South Africa"],                              # FAW
+    "b33": ["Australia"],                                 # Mack
+    "b41": ["South Africa"],                              # Powerstar
+    "b46": ["South Africa"],                              # Shacman
+    "b47": ["South Africa"],                              # Sinotruk
+    "b52": ["Australia", "South Africa"]                  # UD Trucks
+}
+
+# -------------------------------------------------------------------
+# Validate adhoc_price_last_model by country
+# -------------------------------------------------------------------
+
+if (
+    "countryquestion" in df.columns
+    and "adhoc_price_last_model" in df.columns
+):
+
+    normalized_model = (
+        df["adhoc_price_last_model"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    for i in df.index:
+
+        model = normalized_model.loc[i]
+
+        if is_blank(model):
+            continue
+
+        country_code = pd.to_numeric(
+            df.loc[i, "countryquestion"],
+            errors="coerce"
+        )
+
+        country_name = COUNTRY_MAP.get(country_code)
+
+        allowed_countries = MODEL_COUNTRY_MAP.get(model)
+
+        if (
+            allowed_countries is not None
+            and country_name not in allowed_countries
+        ):
+
+            add_issue(
+                0,
+                f"adhoc_price_last_model {model} not valid in {country_name}",
+                i
+            )
+
+# -------------------------------------------------------------------
+# Validate adhoc_price_last brand by country
+# -------------------------------------------------------------------
+
+if (
+    "countryquestion" in df.columns
+    and "adhoc_price_last" in df.columns
+):
+
+    normalized_brand = (
+        df["adhoc_price_last"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    for i in df.index:
+
+        brand = normalized_brand.loc[i]
+
+        if is_blank(brand):
+            continue
+
+        country_code = pd.to_numeric(
+            df.loc[i, "countryquestion"],
+            errors="coerce"
+        )
+
+        country_name = COUNTRY_MAP.get(country_code)
+
+        allowed_countries = BRAND_COUNTRY_MAP.get(brand)
+
+        if (
+            allowed_countries is not None
+            and country_name not in allowed_countries
+        ):
+
+            add_issue(
+                0,
+                f"adhoc_price_last {brand} not valid in {country_name}",
+                i
+            )
+
+# -------------------------------------------------------------------
+# Validate pricing comparison brands by country
+# -------------------------------------------------------------------
+
+if "countryquestion" in df.columns:
+
+    for b in PRICE_BRANDS:
+
+        comp_col = f"adhoc_price_comp_{b}"
+
+        if comp_col not in df.columns:
+            continue
+
+        for i in df.index:
+
+            if is_blank(df.loc[i, comp_col]):
+                continue
+
+            country_code = pd.to_numeric(
+                df.loc[i, "countryquestion"],
+                errors="coerce"
+            )
+
+            country_name = COUNTRY_MAP.get(country_code)
+
+            allowed_countries = BRAND_COUNTRY_MAP.get(b)
+
+            if (
+                allowed_countries is not None
+                and country_name not in allowed_countries
+            ):
+
+                add_issue(
+                    0,
+                    f"{comp_col} not valid in {country_name}",
+                    i
+                )
 
 VALID_BRAND_CODES = list(MASTER_BRANDS.keys())
 # -------------------------------------------------------------------
