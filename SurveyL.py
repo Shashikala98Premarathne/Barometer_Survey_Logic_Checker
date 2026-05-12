@@ -313,12 +313,6 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_cost": "numeric",
     "adhoc_price_last_weight": "numeric",
 
-    "adhoc_price_last_type": [1,2],
-
-    "adhoc_price_last_axle": [1,2,3,4,5,6,7,8,9,10,11],
-
-    "adhoc_price_last_engine": "numeric",
-    "adhoc_price_last_disp": "numeric",
 
     "adhoc_price_last_cab": [1,2,3],
 
@@ -671,6 +665,7 @@ validate_binary_prefix("adhoc_ch_barr_")
 validate_binary_prefix("adhoc_ch_reason_")
 validate_binary_prefix("adhoc_ch_unaided_aware_")
 validate_binary_prefix("image_")
+validate_binary_prefix("trucks_consideration_type_b")
 
 # -------------------------------------------------------------------
 # Scale validations
@@ -989,51 +984,7 @@ for col in brand_code_vars:
             0,
             f"{col} invalid brand code: {df.loc[i, col]}",
             i
-        )
-# -------------------------------------------------------------------
-# Results output
-# -------------------------------------------------------------------
-if detailed:
-
-    results_df = pd.DataFrame(
-        detailed,
-        columns=["RowID", "RuleID", "Issue"]
-    )
-
-    results_df["Rule Description"] = results_df["RuleID"].map(SURVEY_RULES)
-
-    if "respid" in df.columns:
-
-        results_df["Respondent ID"] = results_df["RowID"].apply(
-            lambda i: df.loc[i, "respid"]
-            if i in df.index else np.nan
-        )
-
-    else:
-        results_df["Respondent ID"] = np.nan
-
-    results_df = results_df[
-        [
-            "Respondent ID",
-            "RowID",
-            "RuleID",
-            "Rule Description",
-            "Issue"
-        ]
-    ]
-
-else:
-
-    results_df = pd.DataFrame(
-        columns=[
-            "Respondent ID",
-            "RowID",
-            "RuleID",
-            "Rule Description",
-            "Issue"
-        ]
-    )
-    
+        ) 
 # -------------------------------------------------------------------
 # Adhoc pricing logic
 # -------------------------------------------------------------------
@@ -1156,7 +1107,50 @@ for b in brand_codes:
                     f"{more_col} required when {comp_col}=2",
                     i
                 )
-                   
+# -------------------------------------------------------------------
+# Results output
+# -------------------------------------------------------------------
+if detailed:
+
+    results_df = pd.DataFrame(
+        detailed,
+        columns=["RowID", "RuleID", "Issue"]
+    )
+
+    results_df["Rule Description"] = results_df["RuleID"].map(SURVEY_RULES)
+
+    if "respid" in df.columns:
+
+        results_df["Respondent ID"] = results_df["RowID"].apply(
+            lambda i: df.loc[i, "respid"]
+            if i in df.index else np.nan
+        )
+
+    else:
+        results_df["Respondent ID"] = np.nan
+
+    results_df = results_df[
+        [
+            "Respondent ID",
+            "RowID",
+            "RuleID",
+            "Rule Description",
+            "Issue"
+        ]
+    ]
+
+else:
+
+    results_df = pd.DataFrame(
+        columns=[
+            "Respondent ID",
+            "RowID",
+            "RuleID",
+            "Rule Description",
+            "Issue"
+        ]
+    )
+                      
 # -------------------------------------------------------------------
 # Display results
 # -------------------------------------------------------------------
