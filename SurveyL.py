@@ -1096,11 +1096,15 @@ for b in brand_codes:
     if comp_col not in df.columns:
         continue
 
-    # -----------------------------------------------------------
-    # Ask only if:
-    # adhoc_last_purchase = 1
-    # AND purchased brand != current brand
-    # -----------------------------------------------------------
+for b in brand_codes:
+
+    comp_col = f"adhoc_price_comp_{b}"
+    less_col = f"adhoc_price_comp_less_{b}"
+    more_col = f"adhoc_price_comp_more_{b}"
+
+    if comp_col not in df.columns:
+        continue
+
     trigger = (
         (pd.to_numeric(
             df["adhoc_last_purchase"],
@@ -1110,11 +1114,24 @@ for b in brand_codes:
         (purchased_brand != b)
     )
 
-    # -----------------------------------------------------------
-    # Main comparison required
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
+    # Detect whether this brand was actually asked
+    # -------------------------------------------------------
+    asked_mask = pd.Series(False, index=df.index)
+
+    for c in [comp_col, less_col, more_col]:
+
+        if c in df.columns:
+
+            asked_mask |= ~df[c].apply(is_blank)
+
+    # -------------------------------------------------------
+    # Validate comp required
+    # -------------------------------------------------------
     bad = (
         trigger
+        &
+        asked_mask
         &
         df[comp_col].apply(is_blank)
     )
@@ -1123,19 +1140,22 @@ for b in brand_codes:
 
         add_issue(
             0,
-            f"{comp_col} required when purchased brand != {b}",
+            f"{comp_col} missing",
             i
         )
 
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     # LESS logic
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     if less_col in df.columns:
 
         bad_less = (
             trigger
             &
-            (pd.to_numeric(df[comp_col], errors="coerce") == 1)
+            (pd.to_numeric(
+                df[comp_col],
+                errors="coerce"
+            ) == 1)
             &
             df[less_col].apply(is_blank)
         )
@@ -1148,15 +1168,18 @@ for b in brand_codes:
                 i
             )
 
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     # MORE logic
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     if more_col in df.columns:
 
         bad_more = (
             trigger
             &
-            (pd.to_numeric(df[comp_col], errors="coerce") == 2)
+            (pd.to_numeric(
+                df[comp_col],
+                errors="coerce"
+            ) == 2)
             &
             df[more_col].apply(is_blank)
         )
