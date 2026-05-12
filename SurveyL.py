@@ -739,14 +739,30 @@ if "countryquestion" in df.columns:
             continue
 
         # -----------------------------------------------------------
-        # detect rows where question was actually answered
+        # normalize values
         # -----------------------------------------------------------
-        answered = ~df[comp_col].apply(is_blank)
-
-        if not answered.any():
+        comp_vals = (
+            df[comp_col]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+        answered_mask = ~comp_vals.isin([
+                "",
+                "nan",
+                "null",
+                "#null!",
+                "na",
+                "n/a",
+                "none"
+        ])
+        # -----------------------------------------------------------
+        # ONLY rows with actual response
+        # -----------------------------------------------------------
+        if not answered_mask.any():
             continue
 
-        for i in df[answered].index:
+        for i in df[answered_mask].index:
 
             country_code = pd.to_numeric(
                 df.loc[i, "countryquestion"],
@@ -767,6 +783,7 @@ if "countryquestion" in df.columns:
                     f"{comp_col} not valid in {country_name}",
                     i
                 )
+
 
 
 VALID_BRAND_CODES = list(MASTER_BRANDS.keys())
