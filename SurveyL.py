@@ -483,17 +483,15 @@ if "adhoc_price_last_model" in df.columns:
         .str.strip()
         .str.lower()
     )
-
+    
     bad = (
-        ~normalized_model.isin(PRICE_MODELS.keys())
-        &
         ~df["adhoc_price_last_model"].apply(is_blank)
-    )
-
-    add_issues_from_mask(
-        bad,
-        0,
-        "adhoc_price_last_model invalid model code"
+        &
+        ~df["adhoc_price_last"].apply(is_blank)
+        &
+        expected_brand.notna()
+        &
+        (expected_brand != normalized_brand)
     )
 
 if (
@@ -531,6 +529,7 @@ if (
         "adhoc_price_last_model does not match selected brand"
     )
 # -------------------------------------------------------------------
+# -------------------------------------------------------------------
 # Country routing for pricing brands/models
 # -------------------------------------------------------------------
 
@@ -545,9 +544,88 @@ COUNTRY_MAP = {
     8: "China"
 }
 
-# ---------------------------------------------------------------
+# -------------------------------------------------------------------
+# Country groups
+# -------------------------------------------------------------------
+
+VTE_COUNTRIES = [
+    "France",
+    "Germany",
+    "Spain",
+    "Poland",
+    "China"
+]
+
+VTI_COUNTRIES = [
+    "Australia",
+    "South Africa",
+    "South Korea"
+]
+
+# -------------------------------------------------------------------
+# VTE brands
+# Questionnaire instruction:
+# DAF, Iveco, MAN, Mercedes, Renault, Scania, Volvo
+# -------------------------------------------------------------------
+
+VTE_BRANDS = [
+    "b9",   # DAF
+    "b27",  # Iveco
+    "b35",  # MAN
+    "b36",  # Mercedes
+    "b43",  # Renault
+    "b45",  # Scania
+    "b54"   # Volvo
+]
+
+# -------------------------------------------------------------------
+# VTI country-specific brands
+# -------------------------------------------------------------------
+
+VTI_BRAND_COUNTRY_MAP = {
+
+    "Australia": [
+        "b9",   # DAF
+        "b19",  # Fuso
+        "b20",  # Hino
+        "b30",  # Kenworth
+        "b33",  # Mack
+        "b35",  # MAN
+        "b36",  # Mercedes
+        "b45",  # Scania
+        "b50",  # Tata
+        "b52",  # UD
+        "b54"   # Volvo
+    ],
+
+    "South Africa": [
+        "b29",  # FAW
+        "b35",  # MAN
+        "b36",  # Mercedes
+        "b41",  # Powerstar
+        "b45",  # Scania
+        "b46",  # Shacman
+        "b47",  # Sinotruk
+        "b50",  # Tata
+        "b52",  # UD
+        "b54"   # Volvo
+    ],
+
+    "South Korea": [
+        "b24",  # Hyundai
+        "b27",  # Iveco
+        "b35",  # MAN
+        "b45",  # Scania
+        "b50",  # Tata
+        "b54"   # Volvo
+    ]
+}
+
+# -------------------------------------------------------------------
 # Model country availability
-# ---------------------------------------------------------------
+# ONLY for VTI countries
+# -------------------------------------------------------------------
+
 MODEL_COUNTRY_MAP = {
 
     # MAN
@@ -619,120 +697,10 @@ MODEL_COUNTRY_MAP = {
     "ud1": ["Australia", "South Africa"]
 }
 
-# ---------------------------------------------------------------
-# Brand country availability
-# ---------------------------------------------------------------
-BRAND_COUNTRY_MAP = {
-
-    "b35": ["Australia", "South Africa", "South Korea"],  # MAN
-    "b36": ["Australia", "South Africa"],                 # Mercedes
-    "b45": ["Australia", "South Africa", "South Korea"],  # Scania
-    "b54": ["Australia", "South Africa", "South Korea"],  # Volvo
-    "b30": ["Australia"],                                 # Kenworth
-    "b24": ["South Korea"],                               # Hyundai
-    "b50": ["Australia", "South Africa", "South Korea"],  # Tata
-    "b9": ["Australia"],                                  # DAF
-    "b19": ["Australia"],                                 # Fuso
-    "b20": ["Australia"],                                 # Hino
-    "b27": ["South Korea"],                               # Iveco
-    "b29": ["South Africa"],                              # FAW
-    "b33": ["Australia"],                                 # Mack
-    "b41": ["South Africa"],                              # Powerstar
-    "b46": ["South Africa"],                              # Shacman
-    "b47": ["South Africa"],                              # Sinotruk
-    "b52": ["Australia", "South Africa"]                  # UD Trucks
-}
-
 # -------------------------------------------------------------------
-# Validate adhoc_price_last_model by country
-# -------------------------------------------------------------------
-
-if (
-    "countryquestion" in df.columns
-    and "adhoc_price_last_model" in df.columns
-):
-
-    normalized_model = (
-        df["adhoc_price_last_model"]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-    )
-
-    for i in df.index:
-
-        model = normalized_model.loc[i]
-
-        if is_blank(model):
-            continue
-
-        country_code = pd.to_numeric(
-            df.loc[i, "countryquestion"],
-            errors="coerce"
-        )
-
-        country_name = COUNTRY_MAP.get(country_code)
-
-        allowed_countries = MODEL_COUNTRY_MAP.get(model)
-
-        if (
-            allowed_countries is not None
-            and country_name not in allowed_countries
-        ):
-
-            add_issue(
-                0,
-                f"adhoc_price_last_model {model} not valid in {country_name}",
-                i
-            )
-
-# -------------------------------------------------------------------
-# Validate adhoc_price_last brand by country
-# -------------------------------------------------------------------
-
-if (
-    "countryquestion" in df.columns
-    and "adhoc_price_last" in df.columns
-):
-
-    normalized_brand = (
-        df["adhoc_price_last"]
-        .astype(str)
-        .str.strip()
-        .str.lower()
-    )
-
-    for i in df.index:
-
-        brand = normalized_brand.loc[i]
-
-        if is_blank(brand):
-            continue
-
-        country_code = pd.to_numeric(
-            df.loc[i, "countryquestion"],
-            errors="coerce"
-        )
-
-        country_name = COUNTRY_MAP.get(country_code)
-
-        allowed_countries = BRAND_COUNTRY_MAP.get(brand)
-
-        if (
-            allowed_countries is not None
-            and country_name not in allowed_countries
-        ):
-
-            add_issue(
-                0,
-                f"adhoc_price_last {brand} not valid in {country_name}",
-                i
-            )
-
 # -------------------------------------------------------------------
 # Validate pricing comparison brands by country
-# ONLY validate when question actually answered
-# -------------------------------------------------------------------
+# ONLY validate ANSWERED brands
 
 if "countryquestion" in df.columns:
 
@@ -744,26 +712,10 @@ if "countryquestion" in df.columns:
             continue
 
         # -----------------------------------------------------------
-        # normalize values
+        # Only rows where question actually answered
         # -----------------------------------------------------------
-        comp_vals = (
-            df[comp_col]
-            .astype(str)
-            .str.strip()
-            .str.lower()
-        )
-        answered_mask = ~comp_vals.isin([
-                "",
-                "nan",
-                "null",
-                "#null!",
-                "na",
-                "n/a",
-                "none"
-        ])
-        # -----------------------------------------------------------
-        # ONLY rows with actual response
-        # -----------------------------------------------------------
+        answered_mask = ~df[comp_col].apply(is_blank)
+
         if not answered_mask.any():
             continue
 
@@ -776,18 +728,37 @@ if "countryquestion" in df.columns:
 
             country_name = COUNTRY_MAP.get(country_code)
 
-            allowed_countries = BRAND_COUNTRY_MAP.get(b)
+            # -------------------------------------------------------
+            # VTE countries
+            # -------------------------------------------------------
+            if country_name in VTE_COUNTRIES:
 
-            if (
-                allowed_countries is not None
-                and country_name not in allowed_countries
-            ):
+                # ONLY these brands allowed in VTE
+                if b not in VTE_BRANDS:
 
-                add_issue(
-                    0,
-                    f"{comp_col} not valid in {country_name}",
-                    i
+                    add_issue(
+                        0,
+                        f"{comp_col} answered but not valid in {country_name}",
+                        i
+                    )
+
+            # -------------------------------------------------------
+            # VTI countries
+            # -------------------------------------------------------
+            elif country_name in VTI_COUNTRIES:
+
+                allowed_brands = VTI_BRAND_COUNTRY_MAP.get(
+                    country_name,
+                    []
                 )
+
+                if b not in allowed_brands:
+
+                    add_issue(
+                        0,
+                        f"{comp_col} answered but not valid in {country_name}",
+                        i
+                    )
 
 
 
