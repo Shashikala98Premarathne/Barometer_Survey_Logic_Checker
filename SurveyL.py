@@ -482,16 +482,20 @@ if "adhoc_price_last_model" in df.columns:
         .astype(str)
         .str.strip()
         .str.lower()
+        .str.replace("-", "", regex=False)
+        .str.replace(" ", "", regex=False)
     )
-    
+
     bad = (
+        ~normalized_model.isin(PRICE_MODELS.keys())
+        &
         ~df["adhoc_price_last_model"].apply(is_blank)
-        &
-        ~df["adhoc_price_last"].apply(is_blank)
-        &
-        expected_brand.notna()
-        &
-        (expected_brand != normalized_brand)
+    )
+
+    add_issues_from_mask(
+        bad,
+        0,
+        "adhoc_price_last_model invalid model code"
     )
 
 if (
@@ -511,14 +515,18 @@ if (
         .astype(str)
         .str.strip()
         .str.lower()
+        .str.replace("-", "", regex=False)
+        .str.replace(" ", "", regex=False)
     )
 
     expected_brand = normalized_model.map(PRICE_MODELS)
 
     bad = (
-        normalized_model.notna()
+        ~df["adhoc_price_last_model"].apply(is_blank)
         &
-        normalized_brand.notna()
+        ~df["adhoc_price_last"].apply(is_blank)
+        &
+        expected_brand.notna()
         &
         (expected_brand != normalized_brand)
     )
@@ -528,7 +536,6 @@ if (
         0,
         "adhoc_price_last_model does not match selected brand"
     )
-# -------------------------------------------------------------------
 # -------------------------------------------------------------------
 # Country routing for pricing brands/models
 # -------------------------------------------------------------------
