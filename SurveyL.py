@@ -693,14 +693,15 @@ for c in config_cols:
 
 # -------------------------------------------------------------------
 # Scale validations
-# -------------------------------------------------------------------
-sustain_validate_cols = [
+
+cols = [
     c for c in df.columns
     if c.startswith("sustainability_qualities_")
     and c != "sustainability_qualities_5"
 ]
 
-for c in sustain_validate_cols:
+for c in cols:
+
     vals = pd.to_numeric(df[c], errors="coerce")
 
     invalid = (
@@ -715,13 +716,6 @@ for c in sustain_validate_cols:
             f"{c} invalid value",
             i
         )
-
-
-#validate_scale_prefix(
-#    "sustainability_qualities_",
-#    [1,2,3,4,5],
-#    exclude={"sustainability_qualities_5"}
-#)
 validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_make_origin_", [1,2,3])
@@ -945,12 +939,23 @@ require_any_answer(
     "gas_barriers missing"
 )
 
-require_any_answer(
-    df["sustainability_duration"].isin([1,2,3]),
-    sustain_cols,
-    14,
-    "sustainability_qualities missing"
+sustain_any_answer = (
+    df[sustain_cols]
+    .notna()
+    .any(axis=1)
 )
+
+bad = (
+    df["sustainability_duration"].isin([1,2,3])
+    & ~sustain_any_answer
+)
+
+for i in df[bad].index:
+    add_issue(
+        14,
+        "sustainability_qualities missing",
+        i
+    )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
