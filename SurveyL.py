@@ -35,7 +35,7 @@ def set_background_solid(main="#6CD7E551", sidebar="#EEEFF3"):
 set_background_solid()
 
 st.title("🚛 Barometer Survey Logic Checker")
-st.caption("Validation tool for barometer data.vvvvv" )
+st.caption("Validation tool for barometer data.")
 
 # -------------------------------------------------------------------
 # File helpers
