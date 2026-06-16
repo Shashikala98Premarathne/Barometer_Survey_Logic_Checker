@@ -12,7 +12,7 @@ from io import BytesIO
 # App setup
 # -------------------------------------------------------------------
 st.set_page_config(page_title="Barometer Survey Logic Checker", layout="wide")
-print("RUNNING VERSION XYZ")
+
 def set_background_solid(main="#6CD7E551", sidebar="#EEEFF3"):
     st.markdown(f"""
     <style>
@@ -35,7 +35,7 @@ def set_background_solid(main="#6CD7E551", sidebar="#EEEFF3"):
 set_background_solid()
 
 st.title("🚛 Barometer Survey Logic Checker")
-st.caption("Validation tool for barometer data.")
+st.caption("Validation tool for barometer data.vvvvv" )
 
 # -------------------------------------------------------------------
 # File helpers
