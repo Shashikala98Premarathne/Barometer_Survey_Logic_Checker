@@ -1379,12 +1379,23 @@ require_any_answer(
     "gas_barriers missing"
 )
 
-require_any_answer(
-    df["sustainability_duration"].isin([1,2,3]),
-    sustain_cols,
-    14,
-    "sustainability_qualities missing"
+sustain_any_answer = (
+    df[sustain_cols]
+    .notna()
+    .any(axis=1)
 )
+
+bad = (
+    df["sustainability_duration"].isin([1,2,3])
+    & ~sustain_any_answer
+)
+
+for i in df[bad].index:
+    add_issue(
+        14,
+        "sustainability_qualities missing",
+        i
+    )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
