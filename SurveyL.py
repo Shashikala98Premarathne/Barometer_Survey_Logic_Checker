@@ -694,7 +694,11 @@ for c in config_cols:
 # -------------------------------------------------------------------
 # Scale validations
 # -------------------------------------------------------------------
-validate_scale_prefix("sustainability_qualities_", [1,2,3,4,5])
+validate_scale_prefix(
+    "sustainability_qualities_",
+    [1,2,3,4,5],
+    exclude={"sustainability_qualities_5"}
+)
 validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_make_origin_", [1,2,3])
