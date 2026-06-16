@@ -1,5 +1,5 @@
 # ==========================================================
-# Full Barometer Survey Logic Checker
+# Barometer Survey Logic Checker
 # ==========================================================
 import re
 import numpy as np
@@ -34,7 +34,7 @@ def set_background_solid(main="#6CD7E551", sidebar="#EEEFF3"):
 
 set_background_solid()
 
-st.title("🚛 Barometer Survey Logic Checker")
+st.title("Barometer VTI Survey Logic Checker")
 st.caption("Validation tool for barometer data.")
 
 # -------------------------------------------------------------------
@@ -189,6 +189,15 @@ def add_issue(rule_id, msg, idx=None):
 
     if idx is not None:
         detailed.append((idx, rule_id, msg))
+def add_issues_from_mask(mask, rule_id, msg):
+
+    for i in df[mask].index:
+
+        add_issue(
+            rule_id,
+            msg,
+            i
+        )
 
 # -------------------------------------------------------------------
 # Rules dictionary
@@ -251,7 +260,7 @@ VARIABLE_STRUCTURE = {
 
     "electric_purchase": [1,2,3,4,5],
 
-
+    "sustainability_risks": [1,2,3,4,9],
     "sustainability_duration": [1,2,3,4,5,9],
     "sustainability_cost": [1,2,3,4,5],
     "sustainability_newbusiness": [1,2,3,4,5],
@@ -317,8 +326,6 @@ VARIABLE_STRUCTURE = {
     "adhoc_price_last_cab": [1,2,3],
 
     "adhoc_price_cost": "numeric",
-
-    "adhoc_price_last_weight": "numeric",
 }
 
 # -------------------------------------------------------------------
@@ -414,6 +421,460 @@ MASTER_BRANDS = {
     "b96": "Other",
     "b97": "Other"
 }
+
+PRICE_MODELS = {
+
+    # DAF (b9)
+    1: "b9",   # LF
+    2: "b9",   # CF
+    3: "b9",   # XF
+    4: "b9",   # XG
+    5: "b9",   # XG+
+
+    # Iveco (b27)
+    6: "b27",   # Eurocargo
+    7: "b27",   # Stralis
+    8: "b27",   # Trakker
+    9: "b27",   # S-Way
+    10: "b27",  # X-Way
+
+    # MAN (b35)
+    11: "b35",  # TGL
+    12: "b35",  # TGM
+    13: "b35",  # TGS
+    14: "b35",  # TGX
+
+    # Mercedes (b36)
+    15: "b36",  # Atego
+    16: "b36",  # Axor
+    17: "b36",  # Actros
+    18: "b36",  # Econic
+    19: "b36",  # Arocs
+    20: "b36",  # Antos
+
+    # Renault (b43)
+    21: "b43",  # Midlum
+    22: "b43",  # Premium
+    23: "b43",  # Magnum
+    24: "b43",  # Lander
+    25: "b43",  # Kerax
+    26: "b43",  # T
+    27: "b43",  # C
+    28: "b43",  # K
+    29: "b43",  # D
+
+    # Scania (b45)
+    30: "b45",  # P
+    31: "b45",  # G
+    32: "b45",  # R
+    33: "b45",  # S
+
+    # Volvo (b54)
+    34: "b54",  # FL
+    35: "b54",  # FE
+    36: "b54",  # FM
+    37: "b54",  # FH
+    38: "b54",  # FH16
+    39: "b54",  # FMX
+
+    # MAN international variants
+    40: "b35",  # MAN TGM
+    41: "b35",  # MAN TGS
+    42: "b35",  # MAN TGX
+
+    # Mercedes international variants
+    43: "b36",  # MB Actros
+    44: "b36",  # MB Atego
+
+    # Scania international variants
+    45: "b45",  # Scania G
+    46: "b45",  # Scania P
+    47: "b45",  # Scania R
+    48: "b45",  # Scania S
+
+    # Volvo international variants
+    49: "b54",  # Volvo FM
+    50: "b54",  # Volvo FH
+    51: "b54",  # Volvo FH16
+
+    # Kenworth (b30)
+    52: "b30",  # K200
+    53: "b30",  # T409
+    54: "b30",  # T610
+    55: "b30",  # T659
+    56: "b30",  # T909
+    57: "b30",  # C509
+
+    # Hyundai (b24)
+    58: "b24",  # Xcient
+
+    # Tata (b50)
+    59: "b50",  # Daewoo Maxen/Kuxen
+
+    # DAF AU variants
+    60: "b9",   # DAF XF
+    61: "b9",   # DAF CF
+
+    # Fuso (b19)
+    62: "b19",  # FN
+    63: "b19",  # FS
+
+    # Hino (b20)
+    64: "b20",  # Profia
+    65: "b20",  # Ranger
+
+    # Iveco KR variant
+    66: "b27",  # Iveco S-Way
+
+    # FAW (b29)
+    67: "b29",  # JH6
+
+    # Mack (b33)
+    68: "b33",  # Mack
+
+    # Powerstar (b41)
+    69: "b41",  # FT
+    
+    # Shacman (b46)
+    70: "b46",  # X3000
+    71: "b46",  # X6000
+    
+    # Sinotruk (b47)
+    72: "b47",  # Howo
+    
+    # UD Trucks (b52)
+    73: "b52",  # Quester
+    
+    74: np.nan,  # Other
+    75: np.nan   # Don't know
+}
+
+if "adhoc_price_last_model" in df.columns:
+
+    normalized_model = pd.to_numeric(
+        df["adhoc_price_last_model"],
+        errors="coerce"
+    )
+
+    bad = (
+        normalized_model.notna()
+        &
+        ~normalized_model.isin(PRICE_MODELS.keys())
+    )
+
+    add_issues_from_mask(
+        bad,
+        0,
+        "adhoc_price_last_model invalid model code"
+    )
+
+if (
+    "adhoc_price_last" in df.columns
+    and "adhoc_price_last_model" in df.columns
+):
+
+    normalized_brand = (
+        df["adhoc_price_last"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    normalized_model = pd.to_numeric(
+        df["adhoc_price_last_model"],
+        errors="coerce"
+    )
+
+    expected_brand = normalized_model.map(PRICE_MODELS)
+
+    bad = (
+        ~df["adhoc_price_last"].apply(is_blank)
+        &
+        normalized_model.notna()
+        &
+        expected_brand.notna()
+        &
+        (expected_brand != normalized_brand)
+    )
+
+    add_issues_from_mask(
+        bad,
+        0,
+        "adhoc_price_last_model does not match selected brand"
+    )
+    
+
+if (
+    "adhoc_price_last" in df.columns
+    and "adhoc_price_last_model" in df.columns
+):
+
+    normalized_brand = (
+        df["adhoc_price_last"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+
+    normalized_model = (
+        df["adhoc_price_last_model"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .str.replace("-", "", regex=False)
+        .str.replace(" ", "", regex=False)
+    )
+
+    expected_brand = normalized_model.map(PRICE_MODELS)
+
+    bad = (
+        ~df["adhoc_price_last_model"].apply(is_blank)
+        &
+        ~df["adhoc_price_last"].apply(is_blank)
+        &
+        expected_brand.notna()
+        &
+        (expected_brand != normalized_brand)
+    )
+
+    add_issues_from_mask(
+        bad,
+        0,
+        "adhoc_price_last_model does not match selected brand"
+    )
+# -------------------------------------------------------------------
+# Country routing for pricing brands/models
+# -------------------------------------------------------------------
+
+COUNTRY_MAP = {
+    1: "France",
+    2: "Germany",
+    3: "UK",
+    4: "Spain",
+    5: "Poland",
+    6: "South Korea",
+    7: "South Africa",
+    8: "Australia",
+    9: "China"
+}
+
+# -------------------------------------------------------------------
+# Country groups
+# -------------------------------------------------------------------
+
+VTE_COUNTRIES = [
+    "France",
+    "Germany",
+    "Spain",
+    "Poland",
+    "China"
+]
+
+VTI_COUNTRIES = [
+    "Australia",
+    "South Africa",
+    "South Korea"
+]
+
+# -------------------------------------------------------------------
+# VTE brands
+# Questionnaire instruction:
+# DAF, Iveco, MAN, Mercedes, Renault, Scania, Volvo
+# -------------------------------------------------------------------
+
+VTE_BRANDS = [
+    "b9",   # DAF
+    "b27",  # Iveco
+    "b35",  # MAN
+    "b36",  # Mercedes
+    "b43",  # Renault
+    "b45",  # Scania
+    "b54"   # Volvo
+]
+
+# -------------------------------------------------------------------
+# VTI country-specific brands
+# -------------------------------------------------------------------
+
+VTI_BRAND_COUNTRY_MAP = {
+
+    "Australia": [
+        "b9",   # DAF
+        "b19",  # Fuso
+        "b20",  # Hino
+        "b30",  # Kenworth
+        "b33",  # Mack
+        "b35",  # MAN
+        "b36",  # Mercedes
+        "b45",  # Scania
+        "b50",  # Tata
+        "b52",  # UD
+        "b54"   # Volvo
+    ],
+
+    "South Africa": [
+        "b29",  # FAW
+        "b35",  # MAN
+        "b36",  # Mercedes
+        "b41",  # Powerstar
+        "b45",  # Scania
+        "b46",  # Shacman
+        "b47",  # Sinotruk
+        "b50",  # Tata
+        "b52",  # UD
+        "b54"   # Volvo
+    ],
+
+    "South Korea": [
+        "b24",  # Hyundai
+        "b27",  # Iveco
+        "b35",  # MAN
+        "b45",  # Scania
+        "b50",  # Tata
+        "b54"   # Volvo
+    ]
+}
+
+# -------------------------------------------------------------------
+# Model country availability
+# ONLY for VTI countries
+# -------------------------------------------------------------------
+
+MODEL_COUNTRY_MAP = {
+
+    # MAN
+    "m2": ["Australia"],
+    "m3": ["Australia", "South Africa"],
+    "m4": ["Australia", "South Africa", "South Korea"],
+
+    # Mercedes
+    "mb1": ["Australia"],
+    "mb3": ["Australia", "South Africa"],
+
+    # Scania
+    "s1": ["Australia"],
+    "s2": ["Australia", "South Africa", "South Korea"],
+    "s3": ["Australia", "South Africa", "South Korea"],
+    "s4": ["Australia", "South Africa", "South Korea"],
+
+    # Volvo
+    "v3": ["Australia", "South Africa"],
+    "v4": ["Australia", "South Africa", "South Korea"],
+    "v5": ["Australia", "South Africa", "South Korea"],
+
+    # Kenworth
+    "k1": ["Australia"],
+    "k2": ["Australia"],
+    "k3": ["Australia"],
+    "k4": ["Australia"],
+    "k5": ["Australia"],
+    "k6": ["Australia"],
+
+    # Hyundai
+    "hy1": ["South Korea"],
+
+    # Tata
+    "t1": ["Australia", "South Africa", "South Korea"],
+
+    # DAF
+    "d2": ["Australia"],
+    "d3": ["Australia"],
+
+    # Fuso
+    "fu1": ["Australia"],
+    "fu2": ["Australia"],
+
+    # Hino
+    "h1": ["Australia"],
+    "h2": ["Australia"],
+
+    # Iveco
+    "i4": ["South Korea"],
+
+    # FAW
+    "f1": ["South Africa"],
+
+    # Mack
+    "ma1": ["Australia"],
+
+    # Powerstar
+    "p1": ["South Africa"],
+
+    # Shacman
+    "sm1": ["South Africa"],
+    "sm2": ["South Africa"],
+
+    # Sinotruk
+    "st1": ["South Africa"],
+
+    # UD
+    "ud1": ["Australia", "South Africa"]
+}
+
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# Validate pricing comparison brands by country
+# ONLY validate ANSWERED brands
+
+if "countryquestion" in df.columns:
+
+    for b in PRICE_BRANDS:
+
+        comp_col = f"adhoc_price_comp_{b}"
+
+        if comp_col not in df.columns:
+            continue
+
+        # -----------------------------------------------------------
+        # Only rows where question actually answered
+        # -----------------------------------------------------------
+        answered_mask = ~df[comp_col].apply(is_blank)
+
+        if not answered_mask.any():
+            continue
+
+        for i in df[answered_mask].index:
+
+            country_code = pd.to_numeric(
+                df.loc[i, "countryquestion"],
+                errors="coerce"
+            )
+
+            country_name = COUNTRY_MAP.get(country_code)
+
+            # -------------------------------------------------------
+            # VTE countries
+            # -------------------------------------------------------
+            if country_name in VTE_COUNTRIES:
+
+                # ONLY these brands allowed in VTE
+                if b not in VTE_BRANDS:
+
+                    add_issue(
+                        0,
+                        f"{comp_col} answered but not valid in {country_name}",
+                        i
+                    )
+
+            # -------------------------------------------------------
+            # VTI countries
+            # -------------------------------------------------------
+            elif country_name in VTI_COUNTRIES:
+
+                allowed_brands = VTI_BRAND_COUNTRY_MAP.get(
+                    country_name,
+                    []
+                )
+
+                if b not in allowed_brands:
+
+                    add_issue(
+                        0,
+                        f"{comp_col} answered but not valid in {country_name}",
+                        i
+                    )
+
+
 
 VALID_BRAND_CODES = list(MASTER_BRANDS.keys())
 # -------------------------------------------------------------------
@@ -693,29 +1154,8 @@ for c in config_cols:
 
 # -------------------------------------------------------------------
 # Scale validations
-
-cols = [
-    c for c in df.columns
-    if c.startswith("sustainability_qualities_")
-    and c != "sustainability_qualities_5"
-]
-
-for c in cols:
-
-    vals = pd.to_numeric(df[c], errors="coerce")
-
-    invalid = (
-        ~vals.isin([1,2,3,4,5])
-        &
-        vals.notna()
-    )
-
-    for i in df[invalid].index:
-        add_issue(
-            0,
-            f"{c} invalid value",
-            i
-        )
+# -------------------------------------------------------------------
+validate_scale_prefix("sustainability_qualities_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_make_origin_", [1,2,3])
@@ -939,23 +1379,12 @@ require_any_answer(
     "gas_barriers missing"
 )
 
-sustain_any_answer = (
-    df[sustain_cols]
-    .notna()
-    .any(axis=1)
+require_any_answer(
+    df["sustainability_duration"].isin([1,2,3]),
+    sustain_cols,
+    14,
+    "sustainability_qualities missing"
 )
-
-bad = (
-    df["sustainability_duration"].isin([1,2,3])
-    & ~sustain_any_answer
-)
-
-for i in df[bad].index:
-    add_issue(
-        14,
-        "sustainability_qualities missing",
-        i
-    )
 
 require_any_answer(
     df["adhoc_electric_consider"].isin([3,4,5]),
@@ -1152,11 +1581,15 @@ for b in brand_codes:
     if comp_col not in df.columns:
         continue
 
-    # -----------------------------------------------------------
-    # Ask only if:
-    # adhoc_last_purchase = 1
-    # AND purchased brand != current brand
-    # -----------------------------------------------------------
+for b in brand_codes:
+
+    comp_col = f"adhoc_price_comp_{b}"
+    less_col = f"adhoc_price_comp_less_{b}"
+    more_col = f"adhoc_price_comp_more_{b}"
+
+    if comp_col not in df.columns:
+        continue
+
     trigger = (
         (pd.to_numeric(
             df["adhoc_last_purchase"],
@@ -1166,11 +1599,24 @@ for b in brand_codes:
         (purchased_brand != b)
     )
 
-    # -----------------------------------------------------------
-    # Main comparison required
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
+    # Detect whether this brand was actually asked
+    # -------------------------------------------------------
+    asked_mask = pd.Series(False, index=df.index)
+
+    for c in [comp_col, less_col, more_col]:
+
+        if c in df.columns:
+
+            asked_mask |= ~df[c].apply(is_blank)
+
+    # -------------------------------------------------------
+    # Validate comp required
+    # -------------------------------------------------------
     bad = (
         trigger
+        &
+        asked_mask
         &
         df[comp_col].apply(is_blank)
     )
@@ -1179,19 +1625,22 @@ for b in brand_codes:
 
         add_issue(
             0,
-            f"{comp_col} required when purchased brand != {b}",
+            f"{comp_col} missing",
             i
         )
 
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     # LESS logic
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     if less_col in df.columns:
 
         bad_less = (
             trigger
             &
-            (pd.to_numeric(df[comp_col], errors="coerce") == 1)
+            (pd.to_numeric(
+                df[comp_col],
+                errors="coerce"
+            ) == 1)
             &
             df[less_col].apply(is_blank)
         )
@@ -1204,15 +1653,18 @@ for b in brand_codes:
                 i
             )
 
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     # MORE logic
-    # -----------------------------------------------------------
+    # -------------------------------------------------------
     if more_col in df.columns:
 
         bad_more = (
             trigger
             &
-            (pd.to_numeric(df[comp_col], errors="coerce") == 2)
+            (pd.to_numeric(
+                df[comp_col],
+                errors="coerce"
+            ) == 2)
             &
             df[more_col].apply(is_blank)
         )
@@ -1224,6 +1676,208 @@ for b in brand_codes:
                 f"{more_col} required when {comp_col}=2",
                 i
             )
+        
+# -------------------------------------------------------------------
+# safety_SF3 required if >1 answer selected in safety_SF2
+# -------------------------------------------------------------------
+
+sf2_cols = [
+    "safety_SF2_1",
+    "safety_SF2_2",
+    "safety_SF2_3",
+    "safety_SF2_4",
+    "safety_SF2_5",
+    "safety_SF2_6",
+    "safety_SF2_7",
+    "safety_SF2_98"
+]
+
+existing_sf2_cols = [
+    c for c in sf2_cols
+    if c in df.columns
+]
+
+if (
+    "safety_SF3" in df.columns
+    and existing_sf2_cols
+):
+
+    sf2_numeric = (
+        df[existing_sf2_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    # count number of selected options
+    sf2_count = sf2_numeric.eq(1).sum(axis=1)
+
+    # trigger if more than one selected
+    trigger = sf2_count > 1
+
+    bad = (
+        trigger
+        &
+        df["safety_SF3"].apply(is_blank)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            0,
+            "safety_SF3 required when multiple safety_SF2 selected",
+            i
+        )
+
+# -------------------------------------------------------------------
+# safety_SF5 required if safety_SF4 = 1,2,3
+# -------------------------------------------------------------------
+
+sf5_cols = [
+    c for c in df.columns
+    if c.startswith("safety_SF5_")
+]
+
+if sf5_cols and "safety_SF4" in df.columns:
+
+    sf5_numeric = (
+        df[sf5_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    any_sf5_selected = sf5_numeric.eq(1).any(axis=1)
+
+    trigger = df["safety_SF4"].isin([1,2,3])
+
+    bad = (
+        trigger
+        &
+        (~any_sf5_selected)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            0,
+            "At least one safety_SF5 option required when safety_SF4=1,2,3",
+            i
+        )
+        
+# -------------------------------------------------------------------
+# Chinese truck barrier / reason logic
+# -------------------------------------------------------------------
+
+adhoc_ch_barr_cols = [
+    c for c in df.columns
+    if c.startswith("adhoc_ch_barr_")
+]
+
+adhoc_ch_reason_cols = [
+    c for c in df.columns
+    if c.startswith("adhoc_ch_reason_")
+]
+
+# ---------------------------------------------------------------
+# Barrier logic
+# If adhoc_ch_consideration = 1,2
+# ---------------------------------------------------------------
+if (
+    "adhoc_ch_consideration" in df.columns
+    and adhoc_ch_barr_cols
+):
+
+    barr_numeric = (
+        df[adhoc_ch_barr_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    any_barr = barr_numeric.eq(1).any(axis=1)
+
+    trigger_barr = (
+        df["adhoc_ch_consideration"]
+        .isin([1,2])
+    )
+
+    bad_barr = (
+        trigger_barr
+        &
+        (~any_barr)
+    )
+
+    for i in df[bad_barr].index:
+
+        add_issue(
+            20,
+            "adhoc_ch_barr required when adhoc_ch_consideration=1,2",
+            i
+        )
+
+# ---------------------------------------------------------------
+# Reason logic
+# If adhoc_ch_consideration = 3,4,5
+# ---------------------------------------------------------------
+if (
+    "adhoc_ch_consideration" in df.columns
+    and adhoc_ch_reason_cols
+):
+
+    reason_numeric = (
+        df[adhoc_ch_reason_cols]
+        .apply(pd.to_numeric, errors="coerce")
+        .fillna(0)
+    )
+
+    any_reason = reason_numeric.eq(1).any(axis=1)
+
+    trigger_reason = (
+        df["adhoc_ch_consideration"]
+        .isin([3,4,5])
+    )
+
+    bad_reason = (
+        trigger_reason
+        &
+        (~any_reason)
+    )
+
+    for i in df[bad_reason].index:
+
+        add_issue(
+            20,
+            "adhoc_ch_reason required when adhoc_ch_consideration=3,4,5",
+            i
+        )
+        
+# -------------------------------------------------------------------
+# adhoc_ch_fueltypes required
+# If adhoc_ch_consideration = 3,4,5
+# -------------------------------------------------------------------
+
+if (
+    "adhoc_ch_consideration" in df.columns
+    and "adhoc_ch_fueltypes" in df.columns
+):
+
+    trigger = (
+        df["adhoc_ch_consideration"]
+        .isin([3,4,5])
+    )
+
+    bad = (
+        trigger
+        &
+        df["adhoc_ch_fueltypes"].apply(is_blank)
+    )
+
+    for i in df[bad].index:
+
+        add_issue(
+            20,
+            "adhoc_ch_fueltypes required when adhoc_ch_consideration=3,4,5",
+            i
+        )
+
 # -------------------------------------------------------------------
 # Results output
 # -------------------------------------------------------------------
@@ -1245,12 +1899,12 @@ if detailed:
 
     else:
         results_df["Respondent ID"] = np.nan
-        
     results_df["RowID"] += 2
     results_df = results_df[
         [
             "Respondent ID",
             "RowID",
+            "RuleID",
             "Rule Description",
             "Issue"
         ]
@@ -1267,7 +1921,7 @@ else:
             "Issue"
         ]
     )
-                      
+                         
 # -------------------------------------------------------------------
 # Display results
 # -------------------------------------------------------------------
