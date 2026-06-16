@@ -694,11 +694,34 @@ for c in config_cols:
 # -------------------------------------------------------------------
 # Scale validations
 # -------------------------------------------------------------------
-validate_scale_prefix(
-    "sustainability_qualities_",
-    [1,2,3,4,5],
-    exclude={"sustainability_qualities_5"}
-)
+sustain_validate_cols = [
+    c for c in df.columns
+    if c.startswith("sustainability_qualities_")
+    and c != "sustainability_qualities_5"
+]
+
+for c in sustain_validate_cols:
+    vals = pd.to_numeric(df[c], errors="coerce")
+
+    invalid = (
+        ~vals.isin([1,2,3,4,5])
+        &
+        vals.notna()
+    )
+
+    for i in df[invalid].index:
+        add_issue(
+            0,
+            f"{c} invalid value",
+            i
+        )
+
+
+#validate_scale_prefix(
+#    "sustainability_qualities_",
+#    [1,2,3,4,5],
+#    exclude={"sustainability_qualities_5"}
+#)
 validate_scale_prefix("adhoc_truck_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_ch_truck_attr_", [1,2,3,4,5])
 validate_scale_prefix("adhoc_make_origin_", [1,2,3])
